@@ -1,31 +1,38 @@
 <template>
+  <div>
     <StepIndicator :steps="['Editar Información', 'Editar Categorías', 'Confirmación']" :currentStep="step"/>
 
     <TournamentForm 
-        v-if="step === 1" 
-        :modelValue="tournament" 
-        :isEditMode="true" 
-        @submit="handleTournamentUpdate" />
+      v-if="step === 1" 
+      :modelValue="tournament" 
+      :isEditMode="true" 
+      @cancel="handleCancelEdit"
+      @submit="handleTournamentUpdate" />
 
     <TournamentCategoryForm 
-        v-if="step === 2" 
-        :isEditMode="true" 
-        :availableCategories="availableCategories" 
-        :categories="categoriesAdded"
-        @submit-categories="handleCategoryUpdate" />
+      v-if="step === 2" 
+      :isEditMode="true" 
+      :availableCategories="availableCategories" 
+      :categories="categoriesAdded"
+      @submit-categories="handleCategoryUpdate" />
 
     <ShowTournament 
-        v-if="step === 3 && tournament && newCategories.length" 
-        :tournament="tournament"
-        :categories="newCategories" 
-        :editable="true" 
-        :isEditMode="true"
-        @detailsConfirm="editTournament"
-        @cancel="handleCancelEdit" />
+      v-if="step === 3 && tournament && newCategories.length" 
+      :tournament="tournament"
+      :categories="newCategories" 
+      :editable="true" 
+      :isEditMode="true"
+      @detailsConfirm="editTournament"
+      @cancel="handleCancelEdit" />
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { showToast } from '@/utils/alerts.js'
+
+import Swal from 'sweetalert2'
 
 import StepIndicator from '@/components/StepIndicator.vue'
 import TournamentForm from '@/components/TournamentForm.vue'
@@ -35,37 +42,77 @@ import ShowTournament from '@/views/tournament/ShowTournament.vue'
 import { useTournamentStore } from '@/stores/useTournamentStore.js'
 import { useCategoryStore } from '@/stores/useCategoryStore.js'
 
-const step = ref(1)
 const categoryStore = useCategoryStore()
 const tournamentStore = useTournamentStore()
 
-const tournament = tournamentStore.tournament
-const categoriesAdded = categoryStore.categoriesAdded
-const availableCategories = categoryStore.availableCategories
+const step = ref(1)
 const newCategories = ref([])
 
+const router = useRouter()
+const route = useRoute()
+const tournamentId = Number(route.params.id)
+const tournament = tournamentStore.getTournamentById(tournamentId)
+const categoriesAdded = categoryStore.getCategoriesByTournament(tournamentId)
+const availableCategories = categoryStore.availableCategories
+
 const handleTournamentUpdate = (data) => {
-    tournament.value = { ...data }
-    step.value = 2
+  tournament.value = { ...data }
+  step.value = 2
 }
 
 const handleCategoryUpdate = (updatedCategories) => {
-    newCategories.value = [...updatedCategories]
-    step.value = 3
+  newCategories.value = [...updatedCategories]
+  step.value = 3
 }
 
-const editTournament = () => {
-    tournamentStore.setTournament({...tournament})
-    categoryStore.setNewCategories([...newCategories.value])
-    console.log('Todo listo para conectar a la APi y crear el torneo')
+const editTournament = async () => {
+  try {
+    const result = await Swal.fire({
+      title: '¿Confirmar cambios?',
+      text: '¿Estás seguro de que querés guardar los cambios en este torneo?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar'
+    })
+
+    if (result.isConfirmed) {
+      tournamentStore.updateTournament({ ...tournament.value })
+      await categoryStore.updateCategories(tournament.value.id, newCategories.value)
+      showToast({
+        message: 'Torneo y categorías actualizados correctamente.',
+        type: 'success'
+      })
+      router.push({ name: 'IndexTournament' })
+    }
+  } catch (error) {
+    console.error(error)
+    Swal.fire('Error', 'Ocurrió un problema al actualizar el torneo.', 'error')
+  }
 }
 
-const handleCancelEdit = () => {
-    // Podés agregar navegación u otro comportamiento
-    step.value = 1
+const handleCancelEdit = async () => {
+  const result = await Swal.fire({
+    title: 'Cancelar edición',
+    text: '¿Estás seguro de cancelar la edición del torneo?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, cancelar',
+    cancelButtonText: 'Volver'
+  })
+
+  if (result.isConfirmed) {
+    newCategories.value = []
+    showToast({
+      message: 'El torneo fue cancelado.',
+      type: 'info'
+    })
+    router.push({ name: 'IndexTournament' })
+  }
 }
 </script>
 
 <style scoped>
 /* Estilos opcionales */
 </style>
+

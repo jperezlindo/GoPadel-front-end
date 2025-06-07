@@ -1,28 +1,44 @@
 <template>
+  <div>
     <StepIndicator :steps="['Información del Torneo', 'Categorías', 'Confirmación']" :currentStep="step" />
+    
+    <TournamentForm
+      v-if="step === 1"
+      :modelValue="tournament"
+      @submit="handleTournamentCreate"
+      @cancel="handleTournamentCancel"
+    />
 
-    <TournamentForm v-if="step === 1" :modelValue="tournament" @submit="handleTournamentCreate" />
+    <TournamentCategoryForm
+      v-if="step === 2"
+      :availableCategories="availableCategories"
+      :initialCategories="categories"
+      @submit-categories="handleTournamentCategoryCreate"
+    />
 
-    <TournamentCategoryForm v-if="step === 2" :availableCategories="availableCategories" :initialCategories="categories"
-        @submit-categories="handleTournamentCategoryCreate" />
-
-    <ShowTournament v-if="step === 3 && tournament && categories.length" :tournament="tournament"
-        :categories="categories" :editable="true" :isEditing="false" @detailsConfirm="createTournament"
-        @cancel="handleTournamentCancel" />
-
-    <ConfirmDialog v-if="showDialog" :visible="showDialog" :message="msg" @confirm="handleDialogYes"
-        @cancel="handleDialogNo" />
+    <ShowTournament
+      v-if="step === 3 && tournament && categories.length"
+      :tournament="tournament"
+      :categories="categories"
+      :editable="true"
+      :isEditing="false"
+      @detailsConfirm="createTournament"
+      @cancel="handleTournamentCancel"
+    />
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { showToast } from '@/utils/alerts.js'
+
+import Swal from 'sweetalert2'
 
 import StepIndicator from '@/components/StepIndicator.vue'
 import TournamentForm from '@/components/TournamentForm.vue'
 import TournamentCategoryForm from '@/components/TournamentCategoryForm.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 import { useTournamentStore } from '@/stores/useTournamentStore'
 import { useCategoryStore } from '@/stores/useCategoryStore'
@@ -30,52 +46,80 @@ import { useCategoryStore } from '@/stores/useCategoryStore'
 const router = useRouter()
 
 const step = ref(1)
-const msg = ref('')
-const showDialog = ref(false)
 const categories = ref([])
+
 const tournamentStore = useTournamentStore()
 const categoryStore = useCategoryStore()
 
 const availableCategories = categoryStore.availableCategories
 
 const tournament = ref({
-    name: '',
-    start_date: '',
-    end_date: ''
+  name: '',
+  start_date: '',
+  end_date: '',
+  sports_complex_id: 1,
+  isActive: true
 })
 
-
 const handleTournamentCreate = (data) => {
-    tournament.value = { ...data }
-    step.value = 2
+  tournament.value = { ...data }
+  step.value = 2
 }
 
 const handleTournamentCategoryCreate = (categoriesParticipants) => {
-    categories.value = [...categoriesParticipants]
-    step.value = 3
+  categories.value = [...categoriesParticipants]
+  step.value = 3
 }
 
-const createTournament = () => {
-    tournamentStore.setTournament({...tournament})
-    categoryStore.setNewCategories([...categories.value])
-    console.log('Todo listo para conectar a la APi y crear el torneo')
-    
-}
+const handleTournamentCancel = async () => {
+  const result = await Swal.fire({
+    title: 'Cancelar creación',
+    text: '¿Estás seguro de cancelar la creación del torneo?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, cancelar',
+    cancelButtonText: 'Volver'
+  })
 
-const handleTournamentCancel = () => {
+  if (result.isConfirmed) {
     tournament.value = { name: '', start_date: '', end_date: '' }
     categories.value = []
-    step.value = 1
+    showToast({
+      message: 'El torneo fue cancelado.',
+      type: 'success'
+    })
+    router.push({ name: 'IndexTournament' })
+  }
 }
 
-const handleDialogYes = () => {
-    showDialog.value = false
-    console.log('Confirmado')
-}
+const createTournament = async () => {
+  try {
+    const result = await Swal.fire({
+      title: '¿Crear torneo?',
+      text: '¿Estás seguro de que querés crear este torneo? Esta acción guardará la información ingresada.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, crear',
+      cancelButtonText: 'Cancelar'
+    })
 
-const handleDialogNo = () => {
-    showDialog.value = false
-    console.log('Cancelado')
+    if (result.isConfirmed) {
+      tournamentStore.setTournament({ ...tournament.value })
+      const tournamentId = await tournamentStore.createTournament()
+      categoryStore.setNewCategories([...categories.value])
+      await categoryStore.createCategories(tournamentId)
+
+      showToast({
+        message: 'El torneo fue creado exitosamente.',
+        type: 'info'
+      })
+      router.push({ name: 'IndexTournament' })
+    }
+
+  } catch (error) {
+    console.error(error)
+    Swal.fire('Error', 'Ocurrió un problema al crear el torneo.', 'error')
+  }
 }
 </script>
 

@@ -86,7 +86,8 @@ const emit = defineEmits(['submit-categories'])
 const localForm = reactive({
   name: '',
   registration_fee: 0,
-  category_id: ''
+  category_id: '', 
+  isActive: true
 })
 
 const localCategories = ref([])

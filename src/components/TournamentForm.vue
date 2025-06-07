@@ -18,10 +18,24 @@
         <input v-model="localForm.end_date" type="date" class="input" required />
       </div>
 
-      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition">
-        {{ isEditMode ? 'Guardar Cambios' : 'Registrar Torneo' }}
-      </button>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          @click="handleCancel"
+          class="bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500 transition w-full"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="submit"
+          class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+        >
+          {{ isEditMode ? 'Guardar Cambios' : 'Registrar Torneo' }}
+        </button>
+      </div>
     </form>
+
   </div>
 </template>
 
@@ -43,7 +57,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['submit', 'update:modelValue'])
+const emit = defineEmits(['submit', 'update:modelValue', 'cancel'])
 const localForm = reactive({ ...props.modelValue })
 
 const emitSubmit = () => {
@@ -54,6 +68,8 @@ const emitSubmit = () => {
 
   emit('submit', { ...localForm })
 }
+
+const handleCancel = () => emit('cancel')
 
 watch(() => props.modelValue, (newVal) => {
   Object.assign(localForm, newVal)

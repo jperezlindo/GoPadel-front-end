@@ -32,8 +32,8 @@ const routes = [
       { path: 'categories', name: 'IndexCategories', component: Category },
       { path: 'tournaments', name: 'IndexTournament', component: IndexTournament },
       { path: 'tournaments/create', name: 'CreateTournament', component: CreateTournament },
-      { path: 'tournaments/:id/edit', name: 'EditTournament', component: EditTournament, props: true },
-      { path: 'tournaments/:id/show', name: 'ShowTournament', component: ShowTournament, props: true },
+      { path: 'tournaments/edit/:id', name: 'EditTournament', component: EditTournament },
+      { path: 'tournaments/:id/show', name: 'ShowTournament', component: ShowTournament },
 
     ]
   }

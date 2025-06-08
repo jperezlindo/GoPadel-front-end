@@ -11,8 +11,8 @@
                 <li><router-link :to="{ name: 'Home' }" class="nav-link">Inicio</router-link></li>
                 <li><router-link :to="{ name: 'IndexTournament' }" class="nav-link">Torneos</router-link></li>
                 <li><router-link :to="{ name: '' }" class="nav-link">Jugadores</router-link></li>
-                <li><router-link :to="{ name: 'IndexCategories' }" class="nav-link">Categorías</router-link></li>
-                <li><router-link :to="{ name: 'IndexUsers' }" class="nav-link">Usuarios</router-link></li>
+                <li><router-link :to="{ name: 'IndexCategory' }" class="nav-link">Categorías</router-link></li>
+                <li><router-link :to="{ name: 'IndexUser' }" class="nav-link">Usuarios</router-link></li>
             </ul>
 
             <!-- Derecha: usuario logueado -->
@@ -40,8 +40,8 @@
                 <li><router-link :to="{ name: 'Home' }" class="nav-link">Inicio</router-link></li>
                 <li><router-link :to="{ name: 'IndexTournament' }" class="nav-link">Torneos</router-link></li>
                 <li><router-link :to="{ name: '' }" class="nav-link">Jugadores</router-link></li>
-                <li><router-link :to="{ name: 'IndexCategories' }" class="nav-link">Categorías</router-link></li>
-                <li><router-link :to="{ name: 'IndexUsers' }" class="nav-link">Usuarios</router-link></li>
+                <li><router-link :to="{ name: 'IndexCategory' }" class="nav-link">Categorías</router-link></li>
+                <li><router-link :to="{ name: 'IndexUser' }" class="nav-link">Usuarios</router-link></li>
             </ul>
 
             <!-- Usuario mobile -->

@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast } from '@/utils/alerts.js'
 
@@ -40,20 +40,27 @@ import TournamentCategoryForm from '@/components/TournamentCategoryForm.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
 
 import { useTournamentStore } from '@/stores/useTournamentStore.js'
-import { useCategoryStore } from '@/stores/useCategoryStore.js'
+import { useTournamentCategoryStore } from '@/stores/useTournamentCategoryStore'
+import { useCategoryStore } from '@/stores/useCategoryStore'
 
-const categoryStore = useCategoryStore()
+const tournamentCategoryStore = useTournamentCategoryStore()
 const tournamentStore = useTournamentStore()
+const categoryStore = useCategoryStore()
 
 const step = ref(1)
 const newCategories = ref([])
+const availableCategories = ref([])
 
 const router = useRouter()
 const route = useRoute()
 const tournamentId = Number(route.params.id)
 const tournament = tournamentStore.getTournamentById(tournamentId)
-const categoriesAdded = categoryStore.getCategoriesByTournament(tournamentId)
-const availableCategories = categoryStore.availableCategories
+const categoriesAdded = tournamentCategoryStore.getCategoriesByTournament(tournamentId)
+
+onMounted( async () => {
+  await categoryStore.fetchCategories()
+  availableCategories.value = categoryStore.categories
+})
 
 const handleTournamentUpdate = (data) => {
   tournament.value = { ...data }
@@ -78,7 +85,7 @@ const editTournament = async () => {
 
     if (result.isConfirmed) {
       tournamentStore.updateTournament({ ...tournament.value })
-      await categoryStore.updateCategories(tournament.value.id, newCategories.value)
+      await tournamentCategoryStore.updateCategories(tournament.value.id, newCategories.value)
       showToast({
         message: 'Torneo y categorías actualizados correctamente.',
         type: 'success'

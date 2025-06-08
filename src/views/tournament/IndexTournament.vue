@@ -33,11 +33,11 @@ import ListTable from '@/components/ListTable.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
 
 import { useTournamentStore } from '@/stores/useTournamentStore'
-import { useCategoryStore } from '@/stores/useCategoryStore'
+import { useTournamentCategoryStore } from '@/stores/useTournamentCategoryStore.js'
 
 const router = useRouter()
 const tournamentStore = useTournamentStore()
-const categoryStore = useCategoryStore()
+const categoryStore = useTournamentCategoryStore()
 
 let tournaments = tournamentStore.tournaments
 let categories = []

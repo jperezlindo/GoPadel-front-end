@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted  } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from '@/utils/alerts.js'
 
@@ -40,8 +40,9 @@ import TournamentForm from '@/components/TournamentForm.vue'
 import TournamentCategoryForm from '@/components/TournamentCategoryForm.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
 
-import { useTournamentStore } from '@/stores/useTournamentStore'
-import { useCategoryStore } from '@/stores/useCategoryStore'
+import { useTournamentStore } from '@/stores/useTournamentStore.js'
+import { useTournamentCategoryStore } from '@/stores/useTournamentCategoryStore.js'
+import { useCategoryStore } from '@/stores/useCategoryStore.js'
 
 const router = useRouter()
 
@@ -49,16 +50,21 @@ const step = ref(1)
 const categories = ref([])
 
 const tournamentStore = useTournamentStore()
+const tournamentCategoryStore = useTournamentCategoryStore()
 const categoryStore = useCategoryStore()
 
-const availableCategories = categoryStore.availableCategories
-
+const availableCategories = ref([])
 const tournament = ref({
   name: '',
   start_date: '',
   end_date: '',
   sports_complex_id: 1,
   isActive: true
+})
+
+onMounted( async () => {
+  await categoryStore.fetchCategories()
+  availableCategories.value = categoryStore.categories
 })
 
 const handleTournamentCreate = (data) => {
@@ -106,12 +112,12 @@ const createTournament = async () => {
     if (result.isConfirmed) {
       tournamentStore.setTournament({ ...tournament.value })
       const tournamentId = await tournamentStore.createTournament()
-      categoryStore.setNewCategories([...categories.value])
-      await categoryStore.createCategories(tournamentId)
+      tournamentCategoryStore.setNewCategories([...categories.value])
+      await tournamentCategoryStore.createCategories(tournamentId)
 
       showToast({
         message: 'El torneo fue creado exitosamente.',
-        type: 'info'
+        type: 'success'
       })
       router.push({ name: 'IndexTournament' })
     }

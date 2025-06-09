@@ -31,10 +31,10 @@
 <script setup>
 import { ref, onMounted  } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from '@/utils/alerts.js'
 
 import Swal from 'sweetalert2'
 
+import { showToast } from '@/utils/alerts.js'
 import StepIndicator from '@/components/StepIndicator.vue'
 import TournamentForm from '@/components/TournamentForm.vue'
 import TournamentCategoryForm from '@/components/TournamentCategoryForm.vue'
@@ -44,15 +44,13 @@ import { useTournamentStore } from '@/stores/useTournamentStore.js'
 import { useTournamentCategoryStore } from '@/stores/useTournamentCategoryStore.js'
 import { useCategoryStore } from '@/stores/useCategoryStore.js'
 
+const tournamentStore = useTournamentStore()
+const tournamentCategoryStore = useTournamentCategoryStore()
+const categoryStore = useCategoryStore()
 const router = useRouter()
 
 const step = ref(1)
 const categories = ref([])
-
-const tournamentStore = useTournamentStore()
-const tournamentCategoryStore = useTournamentCategoryStore()
-const categoryStore = useCategoryStore()
-
 const availableCategories = ref([])
 const tournament = ref({
   name: '',
@@ -61,6 +59,8 @@ const tournament = ref({
   sports_complex_id: 1,
   isActive: true
 })
+
+
 
 onMounted( async () => {
   await categoryStore.fetchCategories()

@@ -5,14 +5,14 @@
       <button @click="goToCreate" class="btn-primary w-auto px-4">+ Nuevo Torneo</button>
     </div>
 
-    <ListTable :columns="columns" :data="openTournaments">
+    <ListTable :columns="columns" :data="tournaments">
       <template #actions="{ row }">
         <button @click="viewTournament(row)" class="text-green-600 hover:underline mr-2">Ver</button>
         <button @click="editTournament(row.id)" class="text-blue-600 hover:underline mr-2">Editar</button>
-        <button @click="closeTournament(row.id)" class="text-red-600 hover:underline">Cerrar</button>
+        <button @click="closeTournament(row.id)" class="text-red-600 hover:underline">Cerrar {{ row.id }}</button>
       </template>
     </ListTable>
-
+    
     <!-- Modal para ShowTournament -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white w-full max-w-3xl rounded-xl shadow-lg p-6 relative">
@@ -24,11 +24,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from '@/utils/alerts.js'
+
 import Swal from 'sweetalert2'
 
+import { showToast } from '@/utils/alerts.js'
 import ListTable from '@/components/ListTable.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
 
@@ -39,21 +40,16 @@ const router = useRouter()
 const tournamentStore = useTournamentStore()
 const categoryStore = useTournamentCategoryStore()
 
-let tournaments = tournamentStore.tournaments
 let categories = []
 let selectedTournament = {}
 const showModal = ref(false)
-
 const columns = [
   { label: 'Nombre', field: 'name' },
   { label: 'Fecha Inicio', field: 'start_date' },
   { label: 'Fecha Cierre', field: 'end_date' },
 ]
 
-const openTournaments = computed(() => {
-  if (!Array.isArray(tournaments)) return []
-  return tournaments.filter(t => t.isActive)
-})
+const tournaments = computed(() => tournamentStore.tournaments)
 
 const goToCreate = () => {
   router.push({ name: 'CreateTournament' })

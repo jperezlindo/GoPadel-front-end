@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from '@/utils/alerts.js'
 import Swal from 'sweetalert2'
@@ -54,10 +54,11 @@ import { useUserStore } from '@/stores/useUserStore.js'
 const router = useRouter()
 const userStore = useUserStore()
 
-let users = userStore.users
+
 let selectedUser = {}
+const users =  ref([])
 const showModal = ref(false)
-const statusFilter = ref('active') // 👈 nuevo
+const statusFilter = ref('active')
 
 const columns = [
     { label: 'Nombre', field: 'name' },
@@ -66,9 +67,13 @@ const columns = [
     { label: 'WhatsApp', field: 'whatsapp' },
 ]
 
+onMounted( () => {
+    users.value = userStore.users
+})
+
 const filteredUsers = computed(() => {
-    if (!Array.isArray(users)) return []
-    return users.filter(u => u.isActive === (statusFilter.value === 'active'))
+    if (!Array.isArray(users.value)) return []
+    return users.value.filter(u => u.isActive === (statusFilter.value === 'active'))
 })
 
 const goToCreate = () => {

@@ -28,12 +28,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { showToast } from '@/utils/alerts.js'
 
 import Swal from 'sweetalert2'
 
+import { showToast } from '@/utils/alerts.js'
 import StepIndicator from '@/components/StepIndicator.vue'
 import TournamentForm from '@/components/TournamentForm.vue'
 import TournamentCategoryForm from '@/components/TournamentCategoryForm.vue'
@@ -49,21 +49,23 @@ const categoryStore = useCategoryStore()
 
 const step = ref(1)
 const newCategories = ref([])
-const availableCategories = ref([])
-
+const tournament = ref({})
+const categoriesAdded = ref([])
 const router = useRouter()
 const route = useRoute()
-const tournamentId = Number(route.params.id)
-const tournament = tournamentStore.getTournamentById(tournamentId)
-const categoriesAdded = tournamentCategoryStore.getCategoriesByTournament(tournamentId)
 
-onMounted( async () => {
+const tournamentId = computed(() => Number(route.params.id))
+const availableCategories = computed(() => categoryStore.categories)
+
+onMounted(async () => {
   await categoryStore.fetchCategories()
-  availableCategories.value = categoryStore.categories
+  tournament.value = tournamentStore.getTournamentById(tournamentId.value)
+  categoriesAdded.value = tournamentCategoryStore.getCategoriesByTournament(tournamentId.value)
 })
 
 const handleTournamentUpdate = (data) => {
   tournament.value = { ...data }
+  console.log(tournament.value)
   step.value = 2
 }
 
@@ -122,4 +124,3 @@ const handleCancelEdit = async () => {
 <style scoped>
 /* Estilos opcionales */
 </style>
-

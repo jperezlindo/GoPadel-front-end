@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import ListTable from '@/components/ListTable.vue'
@@ -34,12 +34,15 @@ const categoryStore = useCategoryStore()
 
 const showModal = ref(false)
 const selectedCategory = ref(null)
-
-const categories = categoryStore.categories
+const categories = computed(() => categoryStore.categories)
 
 const columns = [
     { label: 'Nombre', field: 'name' }
 ]
+
+onMounted( async () => {
+    await categoryStore.fetchCategories()
+})
 
 const goToCreate = () => {
     router.push({ name: 'CreateCategory' })

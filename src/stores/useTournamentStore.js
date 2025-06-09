@@ -63,6 +63,7 @@ export const useTournamentStore = defineStore('tournament', () => {
         const index = tournaments.value.findIndex(t => t.id === updatedTournament.id)
         if (index !== -1) {
             tournaments.value[index] = { ...updatedTournament }
+            console.log('Torneo editado:', tournaments.value[index])
         }
     }
     

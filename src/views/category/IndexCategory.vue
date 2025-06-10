@@ -34,14 +34,15 @@ const categoryStore = useCategoryStore()
 
 const showModal = ref(false)
 const selectedCategory = ref(null)
-const categories = computed(() => categoryStore.categories)
+const categories = ref([])
 
 const columns = [
     { label: 'Nombre', field: 'name' }
 ]
 
 onMounted( async () => {
-    await categoryStore.fetchCategories()
+    //await categoryStore.fetchCategories()
+    categories.value = categoryStore.categories
 })
 
 const goToCreate = () => {

@@ -6,9 +6,9 @@ export const useUserStore = defineStore('user', () => {
     const users = ref([
         {
             id: 1,
-            name: 'Juan',
-            lastname: 'Pérez',
-            email: 'juan@mail.com',
+            name: 'Jose',
+            lastname: 'Perezlindo',
+            email: 'jose@mail.com',
             whatsapp: '3794112233',
             isActive: true,
             avatar: 'https://i.pravatar.cc/100?img=3'

@@ -9,7 +9,7 @@
       <template #actions="{ row }">
         <button @click="viewTournament(row)" class="text-green-600 hover:underline mr-2">Ver</button>
         <button @click="editTournament(row.id)" class="text-blue-600 hover:underline mr-2">Editar</button>
-        <button @click="closeTournament(row.id)" class="text-red-600 hover:underline">Cerrar {{ row.id }}</button>
+        <button @click="closeTournament(row.id)" class="text-red-600 hover:underline">Cerrar</button>
       </template>
     </ListTable>
     

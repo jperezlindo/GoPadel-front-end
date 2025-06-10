@@ -6,35 +6,23 @@
 
         <form @submit.prevent="emitSubmit" class="space-y-4">
             <div>
-                <label class="label">Fecha Nacimiento</label>
-                <input v-model="localForm.birthday" type="date" class="input" required />
-            </div>
-
-            <div>
-                <label class="label">Apodo</label>
+                <label class="label">Nickname</label>
                 <input v-model="localForm.nickname" type="text" class="input" required />
             </div>
 
             <div>
+                <label class="label">Fecha Nacimiento</label>
+                <input v-model="localForm.birthday" type="date" class="input" />
+            </div>
+
+            <div>
                 <label class="label">Posición</label>
-                <select v-model="localForm.position" class="input" required>
+                <select v-model="localForm.position" class="input" >
                     <option value="" disabled>Seleccionar posición</option>
-                    <option value="DRIVE">Drive</option>
-                    <option value="REVEZ">Revés</option>
-                    <option value="AMBOS">Ambos</option>
+                    <option v-for="position in positions" :value="position">{{ position }}</option>
                 </select>
             </div>
-
-            <div>
-                <label class="label">Nivel</label>
-                <input v-model="localForm.level" type="text" class="input" required />
-            </div>
-
-            <div>
-                <label class="label">Puntos</label>
-                <input v-model.number="localForm.points" type="number" min="0" class="input" required />
-            </div>
-
+            
             <div>
                 <label class="label">Categoría</label>
                 <select v-model="localForm.category_id" class="input" required>
@@ -44,69 +32,71 @@
             </div>
 
             <div>
-                <label class="label">Foto de perfil</label>
-                <input type="file" accept="image/*" @change="handleImageUpload" class="input" />
-                <div v-if="imagePreview" class="mt-4 flex justify-center">
-                    <img :src="imagePreview" alt="Preview" class="w-24 h-24 rounded-full object-cover shadow" />
-                </div>
+                <label class="label">Nivel</label>
+                <input v-model="localForm.level" type="text" class="input" />
             </div>
 
-            <button type="submit" class="btn-primary">
-                {{ isEditMode ? 'Guardar Cambios' : 'Registrar Jugador' }}
-            </button>
+            <div>
+                <label class="label">Puntos</label>
+                <input v-model.number="localForm.points" type="number" min="0" class="input" />
+            </div>
+
+            <div class="flex justify-end gap-4 pt-4">
+                <button type="button" @click="handleCancel" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">
+                    {{ localForm.id ? 'Actualizar' : 'Registrar' }}
+                </button>
+            </div>
         </form>
     </div>
 </template>
 
 <script setup>
-import { reactive, watch, computed, ref } from 'vue'
+import { reactive, watch, computed, ref, onMounted } from 'vue'
+
+import Swal from 'sweetalert2'
+
+import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useCategoryStore } from '@/stores/useCategoryStore'
+
+const categoryStore = useCategoryStore()
+const playerStore = usePlayerStore()
+
+const positions = ref([])
+const categories = ref([])
 
 const props = defineProps({
     modelValue: {
         type: Object,
         default: () => ({
+            id: '',
             nickname: '',
+            birthday: '',
             position: '',
-            level: '',
+            level: 0,
             points: 0,
-            category_id: '',
-            image: null,
-            birthday: ''
+            partner: null,
+            user_id: 0,
+            caegory_id: 0,
+            isActive: true,
         })
     },
-    categories: {
-        type: Array,
-        default: () => []
-    }
 })
 
-const emit = defineEmits(['submit'])
+const emit = defineEmits(['submit', 'cancel'])
 
 const localForm = reactive({ ...props.modelValue })
 
-const imagePreview = ref(localForm.image || null)
-
 watch(() => props.modelValue, (newVal) => {
     Object.assign(localForm, newVal)
-    imagePreview.value = newVal.image || null
 })
 
-const handleImageUpload = (event) => {
-    const file = event.target.files[0]
-    if (file && file.size < 1 * 1024 * 1024) {
-        const reader = new FileReader()
-        reader.onload = () => {
-            imagePreview.value = reader.result
-            localForm.image = reader.result
-        }
-        reader.readAsDataURL(file)
-    } else {
-        alert('La imagen debe pesar menos de 1MB.')
-    }
-}
-
+onMounted( () => {
+    positions.value = playerStore.positions
+    categories.value = categoryStore.categories
+})
 const emitSubmit = () => {
-    if (!localForm.category_id || !localForm.position) {
+    if (!localForm.category_id || !localForm.nickname) {
         alert('Por favor complete todos los campos obligatorios.')
         return
     }
@@ -115,4 +105,30 @@ const emitSubmit = () => {
 }
 
 const isEditMode = computed(() => !!props.modelValue?.id)
+
+const handleCancel = async () => {
+    const result = await Swal.fire({
+        title: 'Cancelar operación',
+        text: '¿Estás seguro de que querés cancelar?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cancelar',
+        cancelButtonText: 'Volver'
+    })
+    if (result.isConfirmed) emit('cancel')
+}
 </script>
+
+<style>
+.input {
+    @apply w-full px-4 py-2 border rounded-lg shadow-sm;
+}
+
+.btn-primary {
+    @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700;
+}
+
+.btn-secondary {
+    @apply bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500;
+}
+</style>

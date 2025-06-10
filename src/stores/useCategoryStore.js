@@ -2,16 +2,16 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useCategoryStore = defineStore('category', () => {
-    const categories = ref([])
+    const categories = ref([
+        { id: 1, name: 'Primera' },
+        { id: 2, name: 'Segunda' },
+        { id: 3, name: 'Tercera' },
+        { id: 6, name: 'Sexta' },
+    ])
 
     const fetchCategories = async () => {
         // Simulación inicial - reemplazá por fetch real si tenés backend
-        categories.value = [
-            { id: 1, name: 'Primera' },
-            { id: 2, name: 'Segunda' },
-            { id: 3, name: 'Tercera' }
-        ]
-    }
+      }
 
     const getCategoryById = (id) => {
         return categories.value.find(category => category.id === id)

@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <label class="block mb-1 font-medium">WhatsApp</label>
-                    <input v-model="form.whatsapp" type="tel" class="input" />
+                    <input v-model="form.whatsapp" type="tel" class="input" required/>
                 </div>
 
                 <!-- Campos visibles solo en modo creación -->

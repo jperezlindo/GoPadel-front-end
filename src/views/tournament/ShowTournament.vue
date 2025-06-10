@@ -35,7 +35,7 @@
             </button>
             <button @click="handleConfirm"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition w-full mr-2">
-                {{ isEditMode ? 'Editar Torneo' : 'Crear Torneo' }}
+                {{ isEditMode ? 'Actualizar Torneo' : 'Crear Torneo' }}
             </button>
         </div>
     </div>

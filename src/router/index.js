@@ -22,6 +22,10 @@ import IndexTournament from '@/views/tournament/IndexTournament.vue'
 import CreateTournament from '@/views/tournament/CreateTournament.vue'
 import EditTournament from '@/views/tournament/EditTournament.vue'
 
+import IndexPlayer from '@/views/player/indexPlayer.vue'
+import CreatePlayer from '@/views/player/createPlayer.vue'
+import EditPlayer from '@/views/player/editPlayer.vue'
+
 
 const routes = [
   // Rutas públicas fuera del layout
@@ -34,16 +38,22 @@ const routes = [
     component: UserLayout,
     children: [
       { path: 'home', name: 'Home', component: Home },
+      //Users
       { path: 'users', name: 'IndexUser', component: IndexUser },
       { path: 'users/create', name: 'CreateUser', component: CreateUser },
       { path: 'users/edit/:id', name: 'EditUser', component: EditUser },
+      // Categories
       { path: 'categories', name: 'IndexCategory', component: IndexCategory },
       { path: 'categories/create', name: 'CreateCategory', component: CreateCategory },
       { path: 'categories/edit/:id', name: 'EditCategory', component: EditCategory },
+      // Tournaments
       { path: 'tournaments', name: 'IndexTournament', component: IndexTournament },
       { path: 'tournaments/create', name: 'CreateTournament', component: CreateTournament },
       { path: 'tournaments/edit/:id', name: 'EditTournament', component: EditTournament },
-
+      // Players
+      { path: 'players', name: 'IndexPlayer', component: IndexPlayer },
+      { path: 'players/create', name: 'CreatePlayer', component: CreatePlayer },
+      { path: 'players/edit/:id', name: 'EditPlayer', component: EditPlayer },
     ]
   }
 ]

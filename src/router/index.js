@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 // Layout persistente
-import UserLayout from '@/layouts/UserLayout.vue'
+import GenericLayout from '@/layouts/GenericLayout.vue'
 
 // Rutas públicas (sin layout)
 import Login from '@/views/Login.vue'
@@ -21,6 +21,7 @@ import EditCategory from '@/views/category/EditCategory.vue'
 import IndexTournament from '@/views/tournament/IndexTournament.vue'
 import CreateTournament from '@/views/tournament/CreateTournament.vue'
 import EditTournament from '@/views/tournament/EditTournament.vue'
+import OpenTournaments from '@/views/tournament/OpenTournaments.vue'
 
 import IndexPlayer from '@/views/player/indexPlayer.vue'
 import CreatePlayer from '@/views/player/createPlayer.vue'
@@ -35,7 +36,11 @@ const routes = [
   // Rutas con layout persistente
   {
     path: '/',
-    component: UserLayout,
+    redirect: '/home'
+  },
+  {
+    path: '/',
+    component: GenericLayout,
     children: [
       { path: 'home', name: 'Home', component: Home },
       //Users
@@ -54,8 +59,10 @@ const routes = [
       { path: 'players', name: 'IndexPlayer', component: IndexPlayer },
       { path: 'players/create', name: 'CreatePlayer', component: CreatePlayer },
       { path: 'players/edit/:id', name: 'EditPlayer', component: EditPlayer },
+      // Torneo abiertos para Jugadores
+      { path: 'open-tournaments', name: 'OpenTournaments', component: OpenTournaments },
     ]
-  }
+  },
 ]
 
 const router = createRouter({

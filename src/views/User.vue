@@ -31,26 +31,6 @@ import { ref } from 'vue'
 import ListTable from '@/components/ListTable.vue'
 import UserForm from '@/components/UserForm.vue'
 
-// Datos simulados
-const users = ref([
-    {
-        id: 1,
-        name: 'Juan',
-        lastname: 'Pérez',
-        email: 'juan@example.com',
-        whatsapp: '549111111111',
-        password: '*****'
-    },
-    {
-        id: 2,
-        name: 'Ana',
-        lastname: 'González',
-        email: 'ana@example.com',
-        whatsapp: '549222222222',
-        password: '*****'
-    }
-])
-
 // Columnas para la tabla
 const columns = [
     { label: 'Nombre', field: 'name' },

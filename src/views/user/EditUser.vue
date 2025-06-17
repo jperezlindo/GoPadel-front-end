@@ -25,7 +25,7 @@ onMounted(() => {
     if (found) {
         user.value = { ...found }
     } else {
-        router.push({ name: 'IndexUser' })
+        alert('Desarrollar la logica dependiendo del tipo de usuario direccionar')
     }
 })
 
@@ -41,12 +41,21 @@ const handleUpdate = async (updatedData) => {
 
     if (result.isConfirmed) {
         await userStore.updateUser(updatedData)
-        router.push({ name: 'IndexUser' })
+        if (user.value.rol_id == 1){
+            router.push({ name: 'Home'})            
+        }else{
+            router.push({ name: 'IndexUser' })
+        }
     }
 }
 
 const cancelEdit = () => {
     showToast({ type: 'success', message: 'Accion cancelada exitosamente' })
-    router.push({ name: 'IndexUser' })
+    if (user.value.rol_id == 1){
+        router.push({ name: 'Home'})            
+    }else{
+        router.push({ name: 'IndexUser' })
+    }
 }
+
 </script>

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { showToast } from '@/utils/alerts.js'
 
 export const useUserStore = defineStore('user', () => {
+    // REF: el rol 1 es jugador, el rol 2 es usuario
     const users = ref([
         {
             id: 1,
@@ -11,7 +12,8 @@ export const useUserStore = defineStore('user', () => {
             email: 'jose@mail.com',
             whatsapp: '3794112233',
             isActive: true,
-            avatar: 'https://i.pravatar.cc/100?img=3'
+            avatar: 'https://i.pravatar.cc/100?img=3',
+            rol_id: 1
         },
         {
             id: 2,
@@ -20,7 +22,18 @@ export const useUserStore = defineStore('user', () => {
             email: 'ana@mail.com',
             whatsapp: '3794999888',
             isActive: true,
-            avatar: 'https://i.pravatar.cc/100?img=3'
+            avatar: 'https://i.pravatar.cc/150?img=32',
+            rol_id: 2
+        },
+        {
+            id: 3,
+            name: 'Marco',
+            lastname: 'Anzuate',
+            email: 'marco@mail.com',
+            whatsapp: '3794999888',
+            isActive: true,
+            avatar: 'https://i.pravatar.cc/100?img=3',
+            rol_id: 1
         }
     ])
 

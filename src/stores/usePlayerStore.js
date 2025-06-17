@@ -24,7 +24,7 @@ export const usePlayerStore = defineStore( 'player', () =>{
             level: null,
             points: null,
             partner: null,
-            user_id: 2,
+            user_id: 3,
             category_id: 6,
             isActive: true,
         }
@@ -38,6 +38,10 @@ export const usePlayerStore = defineStore( 'player', () =>{
 
     const getPlayerById = (id) => {
         return players.value.find( player => player.id === id)
+    }
+
+    const getPlayerByUserId = (userId) => {
+        return players.value.find( player => player.user_id === userId)
     }
 
     const createPlayer = (player) => {
@@ -67,6 +71,7 @@ export const usePlayerStore = defineStore( 'player', () =>{
         players,
         positions,
         getPlayerById,
+        getPlayerByUserId,
         createPlayer,
         updatePlayer,
         activatePlayer,

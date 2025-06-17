@@ -8,7 +8,7 @@ export const useTournamentStore = defineStore('tournament', () => {
         name: '',
         start_date: '',
         end_date: '',
-        sports_complex_id: 0,
+        sports_venue_id: 0,
         isActive: true
     })
 
@@ -18,7 +18,8 @@ export const useTournamentStore = defineStore('tournament', () => {
             name: 'Copa Primavera',
             start_date: '2025-10-15',
             end_date: '2025-10-17',
-            sports_complex_id: 1,
+            sports_venue_id: 1,
+            venue: 'Padel Court',
             isActive: true
         },
         {
@@ -26,7 +27,8 @@ export const useTournamentStore = defineStore('tournament', () => {
             name: 'Torneo Mixto',
             start_date: '2025-11-01',
             end_date: '2025-11-03',
-            sports_complex_id: 1,
+            sports_venue_id: 1,
+            venue: 'Padel Court',
             isActive: true
         }
     ])
@@ -41,7 +43,7 @@ export const useTournamentStore = defineStore('tournament', () => {
             name: '',
             start_date: '',
             end_date: '',
-            sports_complex_id: 0,
+            sports_venue_id: 0,
             isActive: true
         }
     }

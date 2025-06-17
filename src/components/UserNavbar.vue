@@ -94,16 +94,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import UserMenu from '@/components/UserMenu.vue'
+
+import { useUserStore } from '@/stores/useUserStore'
+import { useAuthStore } from '@/stores/useAuthStore'
+
 
 const isOpen = ref(false)
 const showDropdown = ref(false)
 const showMobileDropdown = ref(false)
 const dropdownRef = ref(null)
 const router = useRouter()
+
+const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const toggleDropdown = () => {
     showDropdown.value = !showDropdown.value
@@ -120,6 +127,8 @@ const handleClickOutside = (event) => {
     }
 }
 
+const user = computed(() => authStore.user)
+
 onMounted(() => {
     document.addEventListener('click', handleClickOutside)
 })
@@ -133,10 +142,6 @@ const logout = () => {
     router.push({ name: 'Login' })
 }
 
-const user = {
-    name: 'Juan Pérez',
-    avatar: 'https://i.pravatar.cc/100?img=3'
-}
 </script>
 
 <style scoped>

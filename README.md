@@ -1,6 +1,6 @@
 🎾 GoPadel — Gestión Integral de Torneos de Pádel
 
-GoPadel es una aplicación web diseñada para gestionar torneos de pádel de manera eficiente y profesional. Permite la inscripción de jugadores, la organización por categorías, el seguimiento de resultados y la administración integral del sistema a través de un panel administrativo moderno.
+GoPadel se esta desarrollando con el fin de ser una aplicación web diseñada para gestionar torneos de pádel de manera eficiente y profesional. Permite la inscripción de jugadores, la organización por categorías, el seguimiento de resultados y la administración integral del sistema a través de un panel administrativo moderno.
 
 ---
 
@@ -58,7 +58,7 @@ src/
 📌 Estado del proyecto
 
 🔧 En desarrollo (versión MVP funcional)  
-🗓️ Última actualización: junio 2025
+🗓️ Última actualización: julio 2025
 
 ---
 
@@ -71,7 +71,7 @@ Este proyecto está abierto a sugerencias, mejoras y contribuciones. Si tenés e
 🧑‍💻 Autor
 
 Desarrollado por JAP-DEV Soluciones
-💼 Desarrollador Full Stack | Apasionado por la tecnología y el deporte  
+💼 Desarrollador Full Stack | Apasionado por la tecnología
 📫 Contacto:perzlindo@gmail.com — LinkedIn: https://www.linkedin.com/in/jose-ariel-perezlindo/
 ---
 

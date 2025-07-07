@@ -1,5 +1,5 @@
 <template>
-    <div class="form-container">
+    <div class="max-w-2xl mx-auto p-2 sm:p-4">
         <h2 class="text-2xl font-bold mb-4">
             {{ isEditMode ? 'Editar Jugador' : 'Registrar Jugador' }}
         </h2>
@@ -7,17 +7,17 @@
         <form @submit.prevent="emitSubmit" class="space-y-4">
             <div>
                 <label class="label">Nickname</label>
-                <input v-model="localForm.nickname" type="text" class="input" required />
+                <input v-model="localForm.nickname" type="text" class="w-full px-4 py-2 border rounded-lg shadow-sm" required />
             </div>
 
             <div>
                 <label class="label">Fecha Nacimiento</label>
-                <input v-model="localForm.birthday" type="date" class="input" />
+                <input v-model="localForm.birthday" type="date" class="w-full px-4 py-2 border rounded-lg shadow-sm" />
             </div>
 
             <div>
                 <label class="label">Posición</label>
-                <select v-model="localForm.position" class="input" >
+                <select v-model="localForm.position" class="w-full px-4 py-2 border rounded-lg shadow-sm" >
                     <option value="" disabled>Seleccionar posición</option>
                     <option v-for="position in positions" :value="position">{{ position }}</option>
                 </select>
@@ -25,7 +25,7 @@
             
             <div>
                 <label class="label">Categoría</label>
-                <select v-model="localForm.category_id" class="input" required>
+                <select v-model="localForm.category_id" class="w-full px-4 py-2 border rounded-lg shadow-sm" required>
                     <option value="" disabled>Seleccionar categoría</option>
                     <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
@@ -33,17 +33,17 @@
 
             <div>
                 <label class="label">Nivel</label>
-                <input v-model="localForm.level" type="text" class="input" />
+                <input v-model="localForm.level" type="text" class="w-full px-4 py-2 border rounded-lg shadow-sm" />
             </div>
 
             <div>
                 <label class="label">Puntos</label>
-                <input v-model.number="localForm.points" type="number" min="0" class="input" />
+                <input v-model.number="localForm.points" type="number" min="0" class="w-full px-4 py-2 border rounded-lg shadow-sm" />
             </div>
 
-            <div class="flex justify-end gap-4 pt-4">
-                <button type="button" @click="handleCancel" class="btn-secondary">Cancelar</button>
-                <button type="submit" class="btn-primary">
+            <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-4">
+                <button type="button" @click="handleCancel" class="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500">Cancelar</button>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                     {{ localForm.id ? 'Actualizar' : 'Registrar' }}
                 </button>
             </div>
@@ -119,16 +119,6 @@ const handleCancel = async () => {
 }
 </script>
 
-<style>
-.input {
-    @apply w-full px-4 py-2 border rounded-lg shadow-sm;
-}
-
-.btn-primary {
-    @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700;
-}
-
-.btn-secondary {
-    @apply bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500;
-}
+<style scoped>
+/* Sin @apply, las clases Tailwind están en el HTML */
 </style>

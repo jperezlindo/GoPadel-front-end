@@ -1,13 +1,14 @@
 <template>
-    <div class="bg-white rounded-2xl shadow-md p-4 overflow-x-auto">
-        <table class="w-full text-left border-collapse">
+    <div class="bg-white rounded-2xl shadow-md p-0 overflow-x-auto" aria-label="Tabla de datos">
+        <table class="min-w-full w-full text-left border-collapse">
             <thead>
                 <tr>
                     <th v-for="(col, index) in columns" :key="index"
-                        class="px-4 py-2 text-gray-600 text-sm uppercase tracking-wide border-b">
+                        class="px-4 py-2 text-gray-600 text-sm uppercase tracking-wide border-b"
+                        scope="col">
                         {{ col.label }}
                     </th>
-                    <th class="px-4 py-2 text-gray-600 text-sm uppercase border-b">Acciones</th>
+                    <th class="px-4 py-2 text-gray-600 text-sm uppercase border-b" scope="col">Acciones</th>
                 </tr>
             </thead>
             <tbody>

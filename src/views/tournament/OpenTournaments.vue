@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-2xl font-bold text-gray-800">Torneos Abiertos</h2>
     </div>
@@ -7,6 +7,7 @@
     <ListTable :columns="columns" :data="tournaments">
       <template #actions="{ row }">
         <button @click="viewTournament(row)" class="text-green-600 hover:underline mr-2">Detalles</button>
+         <button @click="handleRegister(row)" class="text-blue-600 hover:underline mr-2">Registrarme</button>
       </template>
     </ListTable>
     
@@ -17,7 +18,7 @@
         <ShowTournament :tournament="selectedTournament" :categories="categories" />
         <div class="flex justify-center mt-6">
           <button
-            @click="handleRegister"
+            @click="handleRegister(selectedTournament)"
             class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl shadow transition duration-200 w-full md:w-auto"
           >
             Registrarme al Torneo
@@ -48,6 +49,7 @@ const categoryStore = useTournamentCategoryStore()
 let categories = []
 const selectedTournament = ref({})
 const showModal = ref(false)
+
 const columns = [
   { label: 'Nombre', field: 'name' },
   { label: 'Fecha Inicio', field: 'start_date' },
@@ -58,9 +60,8 @@ const columns = [
 
 const tournaments = computed(() => tournamentStore.tournaments)
 
-const handleRegister = async () => {
-  console.log(selectedTournament.value)
-    alert('Listo para agregar el proceso de pago')
+const handleRegister = (tournament) => {
+  router.push({ name: 'RegistrationTournament', params: { id: tournament.id }})
 }
 
 const viewTournament = (tournament) => {

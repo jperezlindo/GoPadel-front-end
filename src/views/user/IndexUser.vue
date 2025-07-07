@@ -1,5 +1,5 @@
 <template>
-    <div class="p-6">
+    <div class="">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-bold text-gray-800">Usuarios</h2>
             <button @click="goToCreate" class="btn-primary w-auto px-4">+ Nuevo Usuario</button>
@@ -73,7 +73,7 @@ onMounted( () => {
 
 const filteredUsers = computed(() => {
     if (!Array.isArray(users.value)) return []
-    return users.value.filter(u => u.isActive === (statusFilter.value === 'active'))
+    return users.value.filter(u => u.isActive === (statusFilter.value === 'active') && u.rol_id !== 1)
 })
 
 const goToCreate = () => {

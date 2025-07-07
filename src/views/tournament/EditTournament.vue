@@ -65,7 +65,6 @@ onMounted(async () => {
 
 const handleTournamentUpdate = (data) => {
   tournament.value = { ...data }
-  console.log(tournament.value)
   step.value = 2
 }
 

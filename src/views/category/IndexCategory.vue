@@ -1,5 +1,5 @@
 <template>
-    <div class="p-6">
+    <div class="">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-bold text-gray-800">Categorias</h2>
             <button @click="goToCreate" class="btn-primary w-auto px-4">+ Nueva Categoria</button>

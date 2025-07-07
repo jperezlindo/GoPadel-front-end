@@ -18,6 +18,7 @@ GoPadel se esta desarrollando con el fin de ser una aplicación web diseñada pa
 
 src/
 ├── assets/            # Recursos estáticos (imágenes, íconos, etc.)
+
 ├── components/        # Componentes reutilizables
 ├── layouts/           # Layouts globales
 ├── router/            # Definición de rutas
@@ -71,7 +72,9 @@ Este proyecto está abierto a sugerencias, mejoras y contribuciones. Si tenés e
 🧑‍💻 Autor
 
 Desarrollado por JAP-DEV Soluciones
+
 💼 Desarrollador Full Stack | Apasionado por la tecnología
+
 📫 Contacto:perzlindo@gmail.com — LinkedIn: https://www.linkedin.com/in/jose-ariel-perezlindo/
 ---
 

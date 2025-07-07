@@ -17,13 +17,19 @@ GoPadel se esta desarrollando con el fin de ser una aplicación web diseñada pa
 📁 Estructura del Proyecto
 
 src/
+
 ├── assets/            # Recursos estáticos (imágenes, íconos, etc.)
 
 ├── components/        # Componentes reutilizables
+
 ├── layouts/           # Layouts globales
+
 ├── router/            # Definición de rutas
+
 ├── stores/            # Estado global con Pinia
+
 ├── views/             # Vistas principales (Login, Registro, Dashboard, etc.)
+
 └── App.vue            # Componente raíz
 
 ---
@@ -76,6 +82,7 @@ Desarrollado por JAP-DEV Soluciones
 💼 Desarrollador Full Stack | Apasionado por la tecnología
 
 📫 Contacto:perzlindo@gmail.com — LinkedIn: https://www.linkedin.com/in/jose-ariel-perezlindo/
+
 ---
 
 📄 Licencia

@@ -35,6 +35,9 @@ import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
 import { showToast } from '@/utils/alerts.js'
+import { formatDateISO, toFullISO } from '@/utils/dateUtils'
+import { parseApiError } from '@/utils/handleApi'
+
 import StepIndicator from '@/components/StepIndicator.vue'
 import TournamentForm from '@/components/TournamentForm.vue'
 import TournamentCategoryForm from '@/components/TournamentCategoryForm.vue'
@@ -56,7 +59,7 @@ const tournament = ref({
   name: '',
   start_date: '',
   end_date: '',
-  sports_complex_id: 1,
+  facility_id: 1,
   isActive: true
 })
 
@@ -108,25 +111,50 @@ const createTournament = async () => {
       confirmButtonText: 'Sí, crear',
       cancelButtonText: 'Cancelar'
     })
+    if (!result.isConfirmed) return
 
-    if (result.isConfirmed) {
-      tournamentStore.setTournament({ ...tournament.value })
-      const tournamentId = await tournamentStore.createTournament()
-      tournamentCategoryStore.setNewCategories([...categories.value])
-      await tournamentCategoryStore.createCategories(tournamentId)
+    // Validaciones mínimas antes de postear
+    const facilityId = Number(tournament.value?.facility_id ?? tournament.value?.facility?.id ?? tournament.value?.facility ?? 1)
+    const errors = []
+    if (!tournament.value?.name || !String(tournament.value.name).trim()) errors.push('El nombre es obligatorio.')
+    if (!tournament.value?.date_start) errors.push('La fecha de inicio es obligatoria.')
+    if (!tournament.value?.date_end) errors.push('La fecha de finalización es obligatoria.')
+    if (!Number.isFinite(facilityId) || facilityId <= 0) errors.push('Debe seleccionar una sede válida.')
 
-      showToast({
-        message: 'El torneo fue creado exitosamente.',
-        type: 'success'
-      })
-      router.push({ name: 'IndexTournament' })
+    if (errors.length) {
+      await Swal.fire('Datos incompletos', errors.join('\n'), 'warning')
+      return
     }
 
+    // Payload FRONT (dejamos que el store lo mapee con toApi)
+    const payload = {
+      name: String(tournament.value.name).trim(),
+      date_start: tournament.value.date_start, // puede ser "YYYY-MM-DD" o ISO
+      date_end: tournament.value.date_end,
+      is_active: Boolean(tournament.value?.is_active ?? tournament.value?.isActive),
+      facility_id: facilityId,
+      categories: (categories?.value ?? newCategories?.value ?? []).map(c => ({
+        id: c?.id ?? undefined,
+        name: c?.name ?? '',
+        price: Number(c?.price ?? 0),
+        // En el front puede venir con cualquiera de estos nombres
+        category: Number(c?.category ?? c?.category_id ?? c?.id ?? 0)
+      }))
+    }
+
+    const created = await tournamentStore.createTournament(payload) // ahora el store usa este payload
+    const tournamentId = created?.id ?? created
+
+    showToast({ message: 'El torneo fue creado exitosamente.', type: 'success' })
+    router.push({ name: 'IndexTournament' })
+
   } catch (error) {
-    console.error(error)
-    Swal.fire('Error', 'Ocurrió un problema al crear el torneo.', 'error')
+    console.error('Create failed:', error?.response?.data || error)
+    const msg = parseApiError(error)
+    Swal.fire('Error', msg || 'Ocurrió un problema al crear el torneo.', 'error')
   }
 }
+
 </script>
 
 <style scoped>

@@ -23,9 +23,9 @@ const routes = [
       { path: 'users/create', name: 'CreateUser', component: () => import('@/views/user/CreateUser.vue') },
       { path: 'users/edit/:id', name: 'EditUser', component: () => import('@/views/user/EditUser.vue') },
       // Categories
-      { path: 'categories', name: 'IndexCategory', component: () => import('@/views/category/IndexCategory.vue') },
-      { path: 'categories/create', name: 'CreateCategory', component: () => import('@/views/category/CreateCategory.vue') },
-      { path: 'categories/edit/:id', name: 'EditCategory', component: () => import('@/views/category/EditCategory.vue') },
+      // { path: 'categories', name: 'IndexCategory', component: () => import('@/views/category/IndexCategory.vue') },
+      // { path: 'categories/create', name: 'CreateCategory', component: () => import('@/views/category/CreateCategory.vue') },
+      // { path: 'categories/edit/:id', name: 'EditCategory', component: () => import('@/views/category/EditCategory.vue') },
       // Tournaments
       { path: 'tournaments', name: 'IndexTournament', component: () => import('@/views/tournament/IndexTournament.vue') },
       { path: 'tournaments/create', name: 'CreateTournament', component: () => import('@/views/tournament/CreateTournament.vue') },

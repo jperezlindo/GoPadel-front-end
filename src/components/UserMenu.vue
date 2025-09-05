@@ -9,9 +9,6 @@
         <router-link :to="{ name: 'IndexPlayer' }" class="nav-link" @click="$emit('menu-action')">Jugadores</router-link>
     </li>
     <li>
-        <router-link :to="{ name: 'IndexCategory' }" class="nav-link" @click="$emit('menu-action')">Categorías</router-link>
-    </li>
-    <li>
         <router-link :to="{ name: 'IndexUser' }" class="nav-link" @click="$emit('menu-action')">Usuarios</router-link>
     </li>
 </template>

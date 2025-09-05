@@ -11,7 +11,7 @@
 
             <div>
                 <label class="label">Costo de inscripción ($)</label>
-                <input v-model.number="localForm.registration_fee" type="number" min="0" class="input" required />
+                <input v-model.number="localForm.price" type="number" min="0" class="input" required />
             </div>
 
             <div>
@@ -42,7 +42,7 @@
                 <tbody>
                     <tr v-for="(cat, index) in localCategories" :key="index" class="border-t">
                     <td class="p-2">{{ cat.name }}</td>
-                    <td class="p-2">{{ cat.registration_fee }}</td>
+                    <td class="p-2">{{ cat.price }}</td>
                     <td class="p-2">{{ getCategoryName(cat.category_id) }}</td>
                     <td class="p-2 text-center space-x-2">
                         <button @click="editCategory(index)" class="text-blue-600 hover:underline">Editar</button>
@@ -54,11 +54,22 @@
         </div>
 
         <!-- Botón de enviar al padre -->
-        <div v-if="localCategories.length" class="mt-6">
-            <button @click="finalizeAndSubmit"
-                class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition">
-                Confirmar Categorías
-            </button>
+        <div class="flex mt-6 gap-2">
+          <button
+            type="button"
+            @click="handleCancel"
+            class="flex-1 bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500 transition"
+          >
+            Cancelar
+          </button>
+
+          <button
+            v-if="localCategories.length"
+            @click="finalizeAndSubmit"
+            class="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
+          >
+            Siguiente
+          </button>
         </div>
     </div>
 </template>
@@ -81,12 +92,15 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['submit-categories'])
+const emit = defineEmits([
+  'submit-categories',
+  'cancel'
+])
 
 const localForm = reactive({
   name: '',
-  registration_fee: 0,
-  category_id: '', 
+  price: 0,
+  category_id: '',
   isActive: true
 })
 
@@ -132,7 +146,7 @@ const finalizeAndSubmit = () => {
 const resetForm = () => {
   Object.assign(localForm, {
     name: '',
-    registration_fee: 0,
+    price: 0,
     category_id: ''
   })
   editIndex.value = null
@@ -140,6 +154,10 @@ const resetForm = () => {
 
 const getCategoryName = (id) => {
   return props.availableCategories.find((cat) => cat.id === id)?.name || 'Sin nombre'
+}
+
+const handleCancel = () => {
+    emit('cancel')
 }
 </script>
 

@@ -7,7 +7,8 @@
         <form @submit.prevent="emitSubmit" class="space-y-4">
             <div>
                 <label class="label">Nickname</label>
-                <input v-model="localForm.nickname" type="text" class="w-full px-4 py-2 border rounded-lg shadow-sm" required />
+                <input v-model="localForm.nickname" type="text" class="w-full px-4 py-2 border rounded-lg shadow-sm"
+                    required />
             </div>
 
             <div>
@@ -17,12 +18,12 @@
 
             <div>
                 <label class="label">Posición</label>
-                <select v-model="localForm.position" class="w-full px-4 py-2 border rounded-lg shadow-sm" >
+                <select v-model="localForm.position" class="w-full px-4 py-2 border rounded-lg shadow-sm">
                     <option value="" disabled>Seleccionar posición</option>
                     <option v-for="position in positions" :value="position">{{ position }}</option>
                 </select>
             </div>
-            
+
             <div>
                 <label class="label">Categoría</label>
                 <select v-model="localForm.category_id" class="w-full px-4 py-2 border rounded-lg shadow-sm" required>
@@ -38,15 +39,24 @@
 
             <div>
                 <label class="label">Puntos</label>
-                <input v-model.number="localForm.points" type="number" min="0" class="w-full px-4 py-2 border rounded-lg shadow-sm" />
+                <input v-model.number="localForm.points" type="number" min="0"
+                    class="w-full px-4 py-2 border rounded-lg shadow-sm" />
             </div>
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
+                <button type="button" @click="handleCancel" 
+                class="w-full sm:flex-1 inline-flex items-center justify-center px-4 py-3 rounded-xl font-semibold
+           bg-gray-500 hover:bg-gray-600 text-white transition focus:outline-none
+           focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                    Cancelar
+                </button>
 
-            <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-4">
-                <button type="button" @click="handleCancel" class="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500">Cancelar</button>
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                <button type="submit" class="w-full sm:flex-1 inline-flex items-center justify-center px-4 py-3 rounded-xl font-semibold
+           bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition focus:outline-none
+           focus:ring-2 focus:ring-offset-2 focus:ring-green-400 disabled:opacity-60 disabled:cursor-not-allowed">
                     {{ localForm.id ? 'Actualizar' : 'Registrar' }}
                 </button>
             </div>
+
         </form>
     </div>
 </template>
@@ -91,7 +101,7 @@ watch(() => props.modelValue, (newVal) => {
     Object.assign(localForm, newVal)
 })
 
-onMounted( () => {
+onMounted(() => {
     positions.value = playerStore.positions
     categories.value = categoryStore.categories
 })

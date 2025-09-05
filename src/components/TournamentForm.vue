@@ -10,12 +10,12 @@
 
       <div>
         <label class="label">Fecha de inicio</label>
-        <input v-model="localForm.start_date" type="date" class="input" required />
+        <input v-model="localForm.date_start" type="date" class="input" required />
       </div>
 
       <div>
         <label class="label">Fecha de finalización</label>
-        <input v-model="localForm.end_date" type="date" class="input" required />
+        <input v-model="localForm.date_end" type="date" class="input" required />
       </div>
 
       <div class="flex gap-2">
@@ -29,9 +29,9 @@
 
         <button
           type="submit"
-          class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+          class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
         >
-          {{ isEditMode ? 'Actualizar' : 'Registrar Torneo' }}
+          Siguiente
         </button>
       </div>
     </form>
@@ -47,8 +47,8 @@ const props = defineProps({
     type: Object,
     default: () => ({
       name: '',
-      start_date: '',
-      end_date: '',
+      date_start: '',
+      date_end: '',
     })
   },
   isEditMode: {

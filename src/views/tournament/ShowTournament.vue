@@ -4,8 +4,8 @@
 
         <div class="space-y-2 mb-6">
             <p><span class="font-semibold">Nombre:</span> {{ tournament?.name }}</p>
-            <p><span class="font-semibold">Fecha de inicio:</span> {{ formatDate(tournament?.start_date) }}</p>
-            <p><span class="font-semibold">Fecha de finalización:</span> {{ formatDate(tournament?.end_date) }}</p>
+            <p><span class="font-semibold">Fecha de inicio:</span> {{ ensureLongDate(tournament?.date_start) }}</p>
+            <p><span class="font-semibold">Fecha de finalización:</span> {{ ensureLongDate(tournament?.date_end) }}</p>
         </div>
 
         <div v-if="categories.length">
@@ -21,7 +21,7 @@
                     <tbody>
                         <tr v-for="(cat, index) in categories" :key="index" class="border-t">
                             <td class="p-2">{{ cat.name }}</td>
-                            <td class="p-2">{{ cat.registration_fee }}</td>
+                            <td class="p-2">{{ cat.price }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -36,7 +36,7 @@
                 Cancelar
             </button>
             <button @click="handleConfirm"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition w-full">
+                class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition">
                 {{ isEditMode ? 'Actualizar Torneo' : 'Crear Torneo' }}
             </button>
         </div>
@@ -44,11 +44,12 @@
 </template>
 
 <script setup>
+import { formatDateLongEs } from '@/utils/dateUtils'
 
 const props = defineProps({
     tournament: {
         type: Object,
-        default: () => ({ name: '', start_date: '', end_date: '' })
+        default: () => (null)
     },
     categories: {
         type: Array,
@@ -74,11 +75,15 @@ const handleCancel = () => {
     emit('cancel')
 }
 
-const formatDate = (dateStr) => {
-    if (!dateStr) return 'No definida'
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })
+const ensureLongDate = (val) => {
+  // Si ya viene en formato largo (ej. "4 de septiembre de 2025"), la dejamos igual
+  if (typeof val === 'string' && /\d{1,2} de \w+ de \d{4}/i.test(val)) {
+    return val
+  }
+  // Si no, la casteamos
+  return formatDateLongEs(val)
 }
+
 </script>
 
 <style scoped>

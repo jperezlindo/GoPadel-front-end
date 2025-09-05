@@ -1,6 +1,6 @@
 <template>
-    <div>
-        <PlayerForm v-if="player" :modelValue="player" @submit="handleUpdate" @cancel="cancelEdit"/>
+    <div class="max-w-xl mx-auto p-6 bg-white rounded-2xl shadow-md">
+        <PlayerForm v-if="player" :modelValue="player" @submit="handleUpdate" @cancel="cancelEdit" />
         <p v-else class="text-gray-500">Cargando jugador...</p>
     </div>
 </template>
@@ -19,13 +19,33 @@ const playerStore = usePlayerStore()
 
 const player = ref(null)
 
-onMounted(() => {
-    const id = parseInt(route.params.id)
-    const found = playerStore.getPlayerById(id)
-    if (found) {
-        player.value = { ...found }
-    } else {
+onMounted(async () => {
+    const id = Number(route.params.id)
+    if (!Number.isFinite(id) || id <= 0) {
+        showToast({ type: 'error', message: 'ID de jugador inválido' })
         router.push({ name: 'IndexPlayer' })
+        return
+    }
+
+    // 1) Intentamos obtener desde memoria
+    const cached = playerStore.getPlayerById(id)
+    if (cached) {
+        player.value = { ...cached }
+    }
+
+    // 2) Siempre refrescamos desde API para tener datos al día
+    try {
+        const fresh = await playerStore.fetchPlayerById(id)
+        if (fresh) {
+            player.value = { ...fresh } // usa mapper (nickname, position, etc.)
+        } else if (!cached) {
+            showToast({ type: 'error', message: 'Jugador no encontrado' })
+            router.push({ name: 'IndexPlayer' })
+        }
+    } catch {
+        if (!cached) {
+            router.push({ name: 'IndexPlayer' })
+        }
     }
 })
 
@@ -39,14 +59,21 @@ const handleUpdate = async (updatedData) => {
         cancelButtonText: 'Cancelar'
     })
 
-    if (result.isConfirmed) {
-        await playerStore.updatePlayer(updatedData)
+    if (!result.isConfirmed) return
+
+    try {
+        // Aseguramos incluir el id del jugador
+        await playerStore.updatePlayer({ id: player.value.id, ...updatedData })
+        showToast({ type: 'success', message: 'Jugador actualizado correctamente' })
         router.push({ name: 'IndexPlayer' })
+    } catch (e) {
+        showToast({ type: 'error', message: 'No se pudo actualizar el jugador' })
+        console.error(e)
     }
 }
 
 const cancelEdit = () => {
-    showToast({ type: 'success', message: 'Accion cancelada exitosamente' })
+    showToast({ type: 'success', message: 'Acción cancelada exitosamente' })
     router.push({ name: 'IndexPlayer' })
 }
 </script>

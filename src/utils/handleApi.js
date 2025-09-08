@@ -1,6 +1,5 @@
 // src/utils/handleApi.js
 import axios from 'axios'
-// import qs from 'qs' // <- opcional si querés serializar arrays/objetos en query
 
 /** ===== Config base ===== */
 const baseURL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -15,7 +14,7 @@ export const setAuthToken = (token) => {
   try {
     if (token) localStorage.setItem('access_token', token)
     else localStorage.removeItem('access_token')
-  } catch (_) {}
+  } catch (_) { }
 }
 
 export const onUnauthorized = (fn) => {
@@ -26,116 +25,150 @@ export const onUnauthorized = (fn) => {
 try {
   const saved = localStorage.getItem('access_token')
   if (saved) accessToken = saved
-} catch (_) {}
+} catch (_) { }
 
-/** ===== Parser de mensajes de error (DRF / Axios) ===== */
-// Devuelve un string listo para mostrar (ej. en Swal)
+/** ===== Helpers internos para errores ===== */
+const isDict = (v) => v && typeof v === 'object' && !Array.isArray(v)
+
+const extractErrorData = (err) => {
+  // Preferí el payload crudo del back
+  return (
+    err?.response?.data ??
+    err?.detail ??
+    err?.raw ??
+    err?.errors ??
+    null
+  )
+}
+
+/**
+ * Convierte cualquier payload en un dict de errores por campo.
+ * - dict -> { campo: [..] } respetando arrays/strings
+ * - list -> { non_field_errors: [...] }
+ * - string -> { detail: ["..."] }
+ * - null/otros -> {}
+ */
+const toFieldMap = (payload) => {
+  const out = {}
+
+  if (!payload) return out
+
+  // Algunos backends colocan el diccionario real dentro de `detail` o `raw`
+  const p = isDict(payload?.detail) ? payload.detail
+    : isDict(payload?.raw) ? payload.raw
+      : payload
+
+  if (typeof p === 'string') {
+    out.detail = [p]
+    return out
+  }
+  if (Array.isArray(p)) {
+    out.non_field_errors = p.map(String)
+    return out
+  }
+  if (!isDict(p)) return out
+
+  for (const key of Object.keys(p)) {
+    const val = p[key]
+    if (Array.isArray(val)) out[key] = val.map(String)
+    else if (typeof val === 'string') out[key] = [val]
+    else if (isDict(val)) {
+      // aplanado simple: nested.field: "msg"
+      // (si necesitás nesting profundo, se puede mejorar)
+      for (const sub of Object.keys(val)) {
+        const flatKey = `${key}.${sub}`
+        const subVal = val[sub]
+        if (Array.isArray(subVal)) out[flatKey] = subVal.map(String)
+        else if (typeof subVal === 'string') out[flatKey] = [subVal]
+      }
+    }
+  }
+  return out
+}
+
+/** Toma el primer mensaje representativo para mostrar en toast */
+const pickFirstMessage = (fieldMap, fallback) => {
+  if (!fieldMap || typeof fieldMap !== 'object') return fallback
+  // prioridad: non_field_errors, detail, luego cualquier campo
+  if (Array.isArray(fieldMap.non_field_errors) && fieldMap.non_field_errors.length) {
+    return fieldMap.non_field_errors[0]
+  }
+  if (Array.isArray(fieldMap.detail) && fieldMap.detail.length) {
+    return fieldMap.detail[0]
+  }
+  for (const k of Object.keys(fieldMap)) {
+    const v = fieldMap[k]
+    if (Array.isArray(v) && v.length) return v[0]
+  }
+  return fallback
+}
+
+/** ===== Parser de mensajes (compatible con tu UI actual) ===== */
 export const parseApiError = (error, { joinWith = '\n', max = 5 } = {}) => {
-  const status = error?.response?.status
-  const data = error?.response?.data || error?.raw || error || {}
+  const data = extractErrorData(error)
+  const fieldMap = toFieldMap(data)
 
+  // construir lista legible
   const msgs = []
 
-  // DRF típicos
-  if (Array.isArray(data?.non_field_errors)) {
-    msgs.push(...data.non_field_errors)
-  }
+  if (Array.isArray(fieldMap.non_field_errors)) msgs.push(...fieldMap.non_field_errors)
+  if (Array.isArray(fieldMap.detail)) msgs.push(...fieldMap.detail)
 
-  if (data?.detail) {
-    if (typeof data.detail === 'string') {
-      msgs.push(data.detail)
-    } else if (Array.isArray(data?.detail?.__all__)) {
-      msgs.push(...data.detail.__all__)
+  for (const [key, val] of Object.entries(fieldMap)) {
+    if (key === 'non_field_errors' || key === 'detail') continue
+    if (Array.isArray(val)) {
+      val.forEach((m) => msgs.push(`${key}: ${m}`))
     }
   }
 
-  // Mensaje genérico de algunas APIs
-  if (typeof data?.message === 'string') {
-    msgs.push(data.message)
-  }
-
-  // Aplanar errores por campo: { field: ["msg"], nested: { sub: ["..."] } }
-  const addFieldErrors = (obj, prefix = '') => {
-    if (!obj || typeof obj !== 'object') return
-    Object.entries(obj).forEach(([key, val]) => {
-      if (key === 'non_field_errors' || key === '__all__') return
-      const label = prefix ? `${prefix}${key}` : key
-
-      if (Array.isArray(val)) {
-        val.forEach(item => {
-          if (typeof item === 'string') {
-            msgs.push(`${label}: ${item}`)
-          } else if (item && typeof item === 'object') {
-            addFieldErrors(item, `${label}.`)
-          }
-        })
-      } else if (val && typeof val === 'object') {
-        addFieldErrors(val, `${label}.`)
-      } else if (typeof val === 'string') {
-        msgs.push(`${label}: ${val}`)
-      }
-    })
-  }
-
-  // Algunas APIs devuelven field errors en top-level o bajo "errors"
-  addFieldErrors(data?.errors ?? data)
-
-  const uniqueMsgs = Array.from(new Set(msgs)).filter(Boolean)
-
-  if (uniqueMsgs.length === 0) {
+  const unique = Array.from(new Set(msgs)).filter(Boolean)
+  if (!unique.length) {
+    const status = error?.response?.status
     return status ? `Error ${status}.` : 'Error de validación.'
   }
-  return uniqueMsgs.slice(0, max).join(joinWith)
+  return unique.slice(0, max).join(joinWith)
 }
 
 /** ===== Normalizador de errores ===== */
 export const normalizeApiError = (err) => {
-  // Si ya viene normalizado desde el interceptor, devuélvelo tal cual
+  // Evitar doble normalización
   if (err && err.__normalized) return err
 
   const status = err?.response?.status ?? null
-  const data = err?.response?.data
-  const detail = data?.detail ?? data?.message ?? data?.error ?? data?.errors ?? data
+  const data = extractErrorData(err)
+  const detail = toFieldMap(data)
+  const message = pickFirstMessage(detail, parseApiError(err))
 
-  // Usamos el parser para extraer el mejor mensaje legible
-  const message = parseApiError(err)
-
-  const normalized = {
+  return {
     __normalized: true,
     status,
-    message,
-    detail,
-    errors: data?.errors,
-    raw: data ?? err
+    message,      // string legible para toasts
+    detail,       // dict por campo (lo que necesita tu formulario)
+    errors: undefined, // por compat
+    raw: data ?? err,  // payload original por si lo querés inspeccionar
   }
-  return normalized
 }
 
 /** ===== Instancia de Axios ===== */
 const instance = axios.create({
   baseURL,
   timeout: DEFAULT_TIMEOUT_MS,
-  withCredentials: false, // ponelo true si vas a usar cookies/CSRF
+  withCredentials: false,
   headers: {
     Accept: 'application/json',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
-  // Si usas qs para serializar arrays:
-  // paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' })
 })
 
 /** ===== Interceptor de Request ===== */
 instance.interceptors.request.use(
   (config) => {
-    // Header Authorization (solo si hay token y no está seteado manualmente)
     if (accessToken) {
       config.headers = config.headers || {}
       if (!('Authorization' in config.headers)) {
         config.headers.Authorization = `Bearer ${accessToken}`
       }
     }
-    // Idioma (opcional):
-    // config.headers['Accept-Language'] = 'es-AR'
     return config
   },
   (error) => Promise.reject(normalizeApiError(error))
@@ -146,14 +179,9 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error?.response?.status
-
-    // === REFRESH JWT (Preparado pero desactivado) ===
-    // if (status === 401 && !originalRequest._retry && !isAuthEndpoint) { ... }
-
     if (status === 401 && onUnauthorizedHandler) {
-      try { onUnauthorizedHandler() } catch (_) {}
+      try { onUnauthorizedHandler() } catch (_) { }
     }
-
     return Promise.reject(normalizeApiError(error))
   }
 )
@@ -177,10 +205,9 @@ export const handleApi = {
     })
     return instance.post(url, fd, {
       ...(config || {}),
-      headers: { ...(config?.headers || {}), 'Content-Type': 'multipart/form-data' }
+      headers: { ...(config?.headers || {}), 'Content-Type': 'multipart/form-data' },
     })
-  }
+  },
 }
 
-/** Export default por compatibilidad (axios interceptado) */
 export default instance

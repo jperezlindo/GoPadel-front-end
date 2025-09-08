@@ -10,12 +10,6 @@
                 <input v-model="localForm.nickname" type="text" class="w-full px-4 py-2 border rounded-lg shadow-sm"
                     required />
             </div>
-
-            <div>
-                <label class="label">Fecha Nacimiento</label>
-                <input v-model="localForm.birthday" type="date" class="w-full px-4 py-2 border rounded-lg shadow-sm" />
-            </div>
-
             <div>
                 <label class="label">Posición</label>
                 <select v-model="localForm.position" class="w-full px-4 py-2 border rounded-lg shadow-sm">
@@ -23,7 +17,6 @@
                     <option v-for="position in positions" :value="position">{{ position }}</option>
                 </select>
             </div>
-
             <div>
                 <label class="label">Categoría</label>
                 <select v-model="localForm.category_id" class="w-full px-4 py-2 border rounded-lg shadow-sm" required>
@@ -31,12 +24,10 @@
                     <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
             </div>
-
             <div>
                 <label class="label">Nivel</label>
                 <input v-model="localForm.level" type="text" class="w-full px-4 py-2 border rounded-lg shadow-sm" />
             </div>
-
             <div>
                 <label class="label">Puntos</label>
                 <input v-model.number="localForm.points" type="number" min="0"
@@ -81,7 +72,6 @@ const props = defineProps({
         default: () => ({
             id: '',
             nickname: '',
-            birthday: '',
             position: '',
             level: 0,
             points: 0,
@@ -130,5 +120,4 @@ const handleCancel = async () => {
 </script>
 
 <style scoped>
-/* Sin @apply, las clases Tailwind están en el HTML */
 </style>

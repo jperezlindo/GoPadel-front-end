@@ -1,70 +1,132 @@
 // src/stores/useUserStore.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { showToast } from '@/utils/alerts.js'
 import { handleApi } from '@/utils/handleApi' // axios preconfigurado
 
 const BASE = '/api/v1/users/'
 
-// ---- Mappers: API <-> Front ----
+// ------------------ Mappers ------------------
+
 // API -> Front
-const fromApi = (api = {}) => ({
-  id: api.id ?? 0,
-  name: api.name ?? '',
-  last_name: api.last_name ?? '',
-  email: api.email ?? '',
-  birth_day: api.birth_day ?? null,        // "YYYY-MM-DD" o null
-  avatar: api.avatar ?? '',
+const fromApi = (api = {}) => {
+  const isActive = Boolean(api.is_active ?? api.isActive ?? true)
+  return {
+    id: api.id ?? 0,
+    name: api.name ?? '',
+    last_name: api.last_name ?? '',
+    email: api.email ?? '',
+    birth_day: api.birth_day ?? null, // "YYYY-MM-DD" o null
+    avatar: api.avatar ?? '',
 
-  // relaciones (exponemos *_id en el front para comodidad)
-  facility_id: api.facility_id ?? api.facility ?? null,
-  city_id: api.city_id ?? api.city ?? null,
-  rol_id: api.rol_id ?? api.rol ?? null,
+    // relaciones (exponemos *_id)
+    facility_id: api.facility_id ?? api.facility ?? null,
+    city_id: api.city_id ?? api.city ?? null,
+    rol_id: api.rol_id ?? api.rol ?? null,
 
-  // flags
-  isActive: Boolean(api.is_active ?? api.isActive ?? true),
-  is_deleted: Boolean(api.is_deleted ?? false),
-  is_staff: Boolean(api.is_staff ?? false),
+    // flags
+    isActive,
+    is_active: isActive,          // alias solo lectura
+    is_deleted: Boolean(api.is_deleted ?? false),
+    is_staff: Boolean(api.is_staff ?? false),
 
-  // timestamps (opcional mostrarlos)
-  created_at: api.created_at ?? null,
-  updated_at: api.updated_at ?? null,
-})
+    // timestamps
+    created_at: api.created_at ?? null,
+    updated_at: api.updated_at ?? null,
+  }
+}
 
-// Front -> API
-// Convenciones (según tu backend/serializers):
-// - Escritura: enviar FK como `facility`, `city`, `rol` (IDs o null)
-// - `birth_day` como "YYYY-MM-DD" o null
-const toApi = (front = {}) => {
+// Front -> API (FULL: para create)
+const toApiFull = (front = {}) => {
   const facilityId = Number(front.facility_id ?? front.facility?.id ?? front.facility)
   const cityId = Number(front.city_id ?? front.city?.id ?? front.city)
   const rolId = Number(front.rol_id ?? front.rol?.id ?? front.rol)
 
-  // birth_day pasa tal cual si viene como "YYYY-MM-DD"; si viene vacío => null
   const birth = (front.birth_day ?? '').toString().trim()
   const birth_day = birth.length ? birth : null
 
-  return {
+  const hasIsActive = Object.prototype.hasOwnProperty.call(front, 'isActive') ||
+    Object.prototype.hasOwnProperty.call(front, 'is_active')
+  const isActive = hasIsActive ? (front.isActive ?? front.is_active) : true
+
+  const payload = {
     name: (front.name ?? '').toString().trim(),
     last_name: (front.last_name ?? '').toString().trim(),
     email: (front.email ?? '').toString().trim(),
     birth_day,
-    avatar: (front.avatar ?? '').toString().trim() || null,
+    avatar: ((front.avatar ?? '').toString().trim() || null),
 
-    // FK como IDs (o null)
     facility: Number.isFinite(facilityId) && facilityId > 0 ? facilityId : null,
     city: Number.isFinite(cityId) && cityId > 0 ? cityId : null,
     rol: Number.isFinite(rolId) && rolId > 0 ? rolId : null,
 
-    // flags que quieras permitir actualizar
-    is_active: front.is_active !== undefined ? Boolean(front.is_active) : Boolean(front.isActive ?? true),
+    is_active: Boolean(isActive),
     is_deleted: Boolean(front.is_deleted ?? false),
     is_staff: Boolean(front.is_staff ?? false),
   }
+
+  // password solo si viene definido y no vacío
+  const pwd = (front.password ?? '').toString()
+  if (pwd.length) payload.password = pwd
+
+  return payload
 }
 
+// Front -> API (PARTIAL: para patch) — solo envía lo definido
+const toApiPartial = (front = {}) => {
+  const out = {}
+
+  if (Object.prototype.hasOwnProperty.call(front, 'name')) {
+    out.name = (front.name ?? '').toString().trim()
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'last_name')) {
+    out.last_name = (front.last_name ?? '').toString().trim()
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'email')) {
+    out.email = (front.email ?? '').toString().trim()
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'birth_day')) {
+    const birth = (front.birth_day ?? '').toString().trim()
+    out.birth_day = birth.length ? birth : null
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'avatar')) {
+    out.avatar = ((front.avatar ?? '').toString().trim() || null)
+  }
+
+  if (Object.prototype.hasOwnProperty.call(front, 'facility_id') || front.facility) {
+    const id = Number(front.facility_id ?? front.facility?.id ?? front.facility)
+    out.facility = Number.isFinite(id) && id > 0 ? id : null
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'city_id') || front.city) {
+    const id = Number(front.city_id ?? front.city?.id ?? front.city)
+    out.city = Number.isFinite(id) && id > 0 ? id : null
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'rol_id') || front.rol) {
+    const id = Number(front.rol_id ?? front.rol?.id ?? front.rol)
+    out.rol = Number.isFinite(id) && id > 0 ? id : null
+  }
+
+  if (Object.prototype.hasOwnProperty.call(front, 'isActive') ||
+    Object.prototype.hasOwnProperty.call(front, 'is_active')) {
+    out.is_active = Boolean(front.isActive ?? front.is_active)
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'is_deleted')) {
+    out.is_deleted = Boolean(front.is_deleted)
+  }
+  if (Object.prototype.hasOwnProperty.call(front, 'is_staff')) {
+    out.is_staff = Boolean(front.is_staff)
+  }
+
+  // password solo si viene definido y no vacío
+  if (Object.prototype.hasOwnProperty.call(front, 'password')) {
+    const pwd = (front.password ?? '').toString()
+    if (pwd.length) out.password = pwd
+  }
+
+  return out
+}
+
+// ------------------ Store ------------------
 export const useUserStore = defineStore('user', () => {
-  // REF: el rol 1 es jugador, el rol 2 es usuario
   const users = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -81,7 +143,7 @@ export const useUserStore = defineStore('user', () => {
       error.value = e
       users.value = []
       console.error('Error fetching users:', e)
-      showToast({ type: 'error', message: 'No se pudieron cargar los usuarios' })
+      throw e
     } finally {
       loading.value = false
     }
@@ -103,120 +165,138 @@ export const useUserStore = defineStore('user', () => {
     } catch (e) {
       error.value = e
       console.error(`Error fetching user #${uid}:`, e)
-      showToast({ type: 'error', message: 'No se pudo obtener el usuario' })
-      return null
+      throw e
     } finally {
       loading.value = false
     }
   }
 
-  // ==== Helper local ====
+  // ==== Helper ====
   const getUserById = (id) => users.value.find(u => u.id === Number(id))
 
   // ==== CREATE ====
   const createUser = async (user) => {
     error.value = null
     try {
-      const payload = toApi(user)
+      const payload = toApiFull(user)
       const { data } = await handleApi.post(BASE, payload)
       const created = fromApi(data)
       users.value.push(created)
-      showToast({ type: 'success', message: 'Usuario creado exitosamente' })
       return created
     } catch (e) {
       error.value = e
       console.error('Error creating user:', e)
-      showToast({ type: 'error', message: 'No se pudo crear el usuario' })
       throw e
     }
   }
 
-  // ==== UPDATE (PATCH) ====
-  const updateUser = async (updatedUser) => {
+  // ==== PATCH genérico ====
+  const patchUser = async (id, partial) => {
+    const uid = Number(id)
+    if (!Number.isFinite(uid)) throw new Error('ID de usuario inválido')
     error.value = null
     try {
-      const uid = Number(updatedUser?.id)
-      if (!Number.isFinite(uid)) throw new Error('ID de usuario inválido')
-      const payload = toApi(updatedUser)
-      const { data } = await handleApi.patch(`${BASE}${uid}/`, payload)
-      const saved = fromApi(data)
+      const payload = toApiPartial(partial ?? {})
+      const { data, status } = await handleApi.patch(`${BASE}${uid}/`, payload)
 
-      const idx = users.value.findIndex(u => u.id === uid)
-      if (idx !== -1) users.value[idx] = saved
-      else users.value.push(saved)
-
-      showToast({ type: 'success', message: 'Usuario actualizado correctamente' })
-      return saved
-    } catch (e) {
-      error.value = e
-      console.error('Error updating user:', e)
-      showToast({ type: 'error', message: 'No se pudo actualizar el usuario' })
-      throw e
-    }
-  }
-
-  // ==== ACTIVATE / DEACTIVATE (PATCH is_active) ====
-  const deactivateUser = async (id) => {
-    error.value = null
-    try {
-      const uid = Number(id)
-      if (!Number.isFinite(uid)) throw new Error('ID de usuario inválido')
-
-      const { data } = await handleApi.patch(`${BASE}${uid}/`, { is_active: false })
-      const saved = data ? fromApi(data) : null
-
-      const idx = users.value.findIndex(u => u.id === uid)
-      if (idx !== -1) {
-        users.value[idx] = saved ?? { ...users.value[idx], isActive: false }
+      if (data) {
+        const saved = fromApi(data)
+        const idx = users.value.findIndex(u => u.id === uid)
+        if (idx !== -1) users.value[idx] = saved
+        else users.value.push(saved)
+        return saved
       }
 
-      showToast({ type: 'success', message: 'Usuario desactivado' })
-      return saved ?? users.value[idx]
+      if (status === 204 || !data) {
+        const idx = users.value.findIndex(u => u.id === uid)
+        if (idx !== -1) {
+          users.value[idx] = fromApi({ ...users.value[idx], ...payload, id: uid })
+          return users.value[idx]
+        }
+      }
+
+      return getUserById(uid)
+    } catch (e) {
+      error.value = e
+      console.error('Error patching user:', e)
+      throw e
+    }
+  }
+
+  // ==== UPDATE (usa PATCH parcial) ====
+  const updateUser = async (updatedUser) => {
+    const uid = Number(updatedUser?.id)
+    if (!Number.isFinite(uid)) throw new Error('ID de usuario inválido')
+    return await patchUser(uid, updatedUser)
+  }
+
+  // ==== ACTIVATE / DEACTIVATE ====
+  const deactivateUser = async (id) => {
+    const uid = Number(id)
+    if (!Number.isFinite(uid)) throw new Error('ID de usuario inválido')
+    error.value = null
+    try {
+      const { data, status } = await handleApi.patch(`${BASE}${uid}/`, { is_active: false })
+      if (data) {
+        const saved = fromApi(data)
+        const idx = users.value.findIndex(u => u.id === uid)
+        if (idx !== -1) users.value[idx] = saved
+        return saved
+      }
+      if (status === 204 || !data) {
+        const idx = users.value.findIndex(u => u.id === uid)
+        if (idx !== -1) users.value[idx] = { ...users.value[idx], isActive: false, is_active: false }
+        return users.value[idx]
+      }
+      return getUserById(uid)
     } catch (e) {
       error.value = e
       console.error('Error deactivating user:', e)
-      showToast({ type: 'error', message: 'No se pudo desactivar el usuario' })
       throw e
     }
   }
 
   const activateUser = async (id) => {
+    const uid = Number(id)
+    if (!Number.isFinite(uid)) throw new Error('ID de usuario inválido')
     error.value = null
     try {
-      const uid = Number(id)
-      if (!Number.isFinite(uid)) throw new Error('ID de usuario inválido')
-
-      const { data } = await handleApi.patch(`${BASE}${uid}/`, { is_active: true })
-      const saved = data ? fromApi(data) : null
-
-      const idx = users.value.findIndex(u => u.id === uid)
-      if (idx !== -1) {
-        users.value[idx] = saved ?? { ...users.value[idx], isActive: true }
+      const { data, status } = await handleApi.patch(`${BASE}${uid}/`, { is_active: true })
+      if (data) {
+        const saved = fromApi(data)
+        const idx = users.value.findIndex(u => u.id === uid)
+        if (idx !== -1) users.value[idx] = saved
+        return saved
       }
-
-      showToast({ type: 'success', message: 'Usuario activado' })
-      return saved ?? users.value[idx]
+      if (status === 204 || !data) {
+        const idx = users.value.findIndex(u => u.id === uid)
+        if (idx !== -1) users.value[idx] = { ...users.value[idx], isActive: true, is_active: true }
+        return users.value[idx]
+      }
+      return getUserById(uid)
     } catch (e) {
       error.value = e
       console.error('Error activating user:', e)
-      showToast({ type: 'error', message: 'No se pudo activar el usuario' })
       throw e
     }
   }
 
+  // Toggle
+  const toggleActive = async (id, nextState = undefined) => {
+    const item = getUserById(id)
+    const desired = (typeof nextState === 'boolean') ? nextState : !item?.isActive
+    return desired ? activateUser(id) : deactivateUser(id)
+  }
+
   return {
     // state
-    users,
-    loading,
-    error,
+    users, loading, error,
+
     // reads
-    fetchUsers,
-    fetchUserById,
-    getUserById,
+    fetchUsers, fetchUserById, getUserById,
+
     // writes
-    createUser,
-    updateUser,
-    deactivateUser,
-    activateUser,
+    createUser, patchUser, updateUser,
+    deactivateUser, activateUser, toggleActive,
   }
 })

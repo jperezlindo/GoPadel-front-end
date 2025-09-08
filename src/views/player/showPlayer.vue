@@ -15,13 +15,13 @@
           player?.category_id + 'a' : 'No informado') }}</p>
         <p><span class="font-semibold">Level: </span> {{ player?.level ?? 'No informado' }}</p>
         <p><span class="font-semibold">Puntos: </span> {{ player?.points ?? 'No informado' }}</p>
+        <p><span class="font-semibold">Partner:</span> {{ player?.partner || 'No informado' }}</p>
         <p>
           <span class="font-semibold">Estado: </span>
           <span :class="player?.isActive ? 'text-green-600' : 'text-red-600'">
             {{ player?.isActive ? 'Activo' : 'Inactivo' }}
           </span>
         </p>
-        <p><span class="font-semibold">Partner:</span> {{ player?.partner || 'No informado' }}</p>
       </div>
     </div>
   </div>

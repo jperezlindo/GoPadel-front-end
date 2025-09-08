@@ -1,35 +1,52 @@
 <template>
-    <div class="">
+    <div>
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-bold text-gray-800">Usuarios</h2>
             <button @click="goToCreate" class="btn-primary w-auto px-4">+ Nuevo Usuario</button>
         </div>
 
-        <!-- Filtro por estado -->
-        <div class="mb-4">
-            <label class="mr-2 font-medium">Mostrar:</label>
-            <select v-model="statusFilter" class="border px-3 py-2 rounded-md">
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
-            </select>
+        <!-- Filtros -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div class="md:col-span-2">
+                <input v-model="searchTerm" type="text" placeholder="Buscar por nombre, apellido o email…"
+                    class="w-full border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring focus:ring-blue-200" />
+            </div>
+            <div>
+                <select v-model="statusFilter"
+                    class="w-full border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring focus:ring-blue-200">
+                    <option value="all">Todos</option>
+                    <option value="active">Activos</option>
+                    <option value="inactive">Inactivos</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Tabla de usuarios -->
+        <!-- Tabla -->
         <ListTable :columns="columns" :data="filteredUsers">
             <template #actions="{ row }">
-                <button @click="showUser(row)" class="text-green-600 hover:underline mr-2">Ver</button>
-                <button @click="editUser(row.id)" class="text-blue-600 hover:underline mr-2">Editar</button>
-                <button v-if="statusFilter === 'active'" @click="deactivateUser(row.id)"
-                    class="text-red-600 hover:underline">
-                    Desactivar
-                </button>
-                <button v-else @click="activateUser(row.id)" class="text-green-600 hover:underline">
-                    Activar
-                </button>
+                <div class="flex items-center gap-3">
+                    <button @click="showUser(row)" class="text-green-600 hover:underline">Ver</button>
+                    <button @click="editUser(row.id)" class="text-blue-600 hover:underline">Editar</button>
+                    <button @click="onToggleActive(row)"
+                        :class="row.isActive ? 'text-red-600 hover:underline' : 'text-emerald-600 hover:underline'">
+                        {{ row.isActive ? 'Desactivar' : 'Activar' }}
+                    </button>
+                </div>
             </template>
         </ListTable>
 
-        <!-- Modal para ShowUser -->
+        <!-- Footer con conteos -->
+        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-600 mt-3">
+            <span>Total: {{ totals.total }}</span>
+            <span>• Activos: {{ totals.active }}</span>
+            <span>• Inactivos: {{ totals.inactive }}</span>
+            <button v-if="searchTerm || statusFilter !== 'all'" @click="clearFilters"
+                class="ml-auto underline text-gray-700 hover:text-black">
+                Limpiar filtros
+            </button>
+        </div>
+
+        <!-- Modal ShowUser -->
         <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow-lg p-6 relative">
                 <button @click="closeModal"
@@ -43,38 +60,83 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from '@/utils/alerts.js'
 import Swal from 'sweetalert2'
+import { showToast } from '@/utils/alerts.js'
 
 import ListTable from '@/components/ListTable.vue'
 import ShowUser from '@/views/user/ShowUser.vue'
-
 import { useUserStore } from '@/stores/useUserStore.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-
-let selectedUser = {}
-const users =  ref([])
 const showModal = ref(false)
-const statusFilter = ref('active')
+const selectedUser = ref(null)
 
+// Filtros locales
+const searchTerm = ref('')
+const statusFilter = ref('all') // 'all' | 'active' | 'inactive'
+
+// Columnas que existen en el modelo/front actual
 const columns = [
     { label: 'Nombre', field: 'name' },
-    { label: 'Apellido', field: 'lastname' },
+    { label: 'Apellido', field: 'last_name' },
     { label: 'Email', field: 'email' },
-    { label: 'WhatsApp', field: 'whatsapp' },
+    { label: 'Rol ID', field: 'rol_id' },
 ]
 
-onMounted( () => {
-    users.value = userStore.users
+// Cargar usuarios al montar
+onMounted(async () => {
+    try {
+        await userStore.fetchUsers()
+    } catch {
+        showToast({ type: 'error', message: 'No se pudieron cargar los usuarios' })
+    }
 })
 
-const filteredUsers = computed(() => {
-    if (!Array.isArray(users.value)) return []
-    return users.value.filter(u => u.isActive === (statusFilter.value === 'active') && u.rol_id !== 1)
+// Totales (sobre el store)
+const totals = computed(() => {
+    const list = Array.isArray(userStore.users) ? userStore.users : []
+    const active = list.filter(u => u.rol_id !== 1 && !!u.isActive).length
+    const inactive = list.filter(u => u.rol_id !== 1 && !u.isActive).length
+    return { total: active + inactive, active, inactive }
 })
+
+// Helper: normaliza texto para búsqueda (sin acentos, minúsculas)
+const toKey = (v) =>
+    String(v ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+
+// Filtro combinado por estado y búsqueda (excluye rol jugador = 1)
+const filteredUsers = computed(() => {
+    const list = Array.isArray(userStore.users) ? userStore.users : []
+
+    const base = list.filter(u => u.rol_id !== 1) // excluimos jugadores
+
+    // estado
+    let byStatus = base
+    if (statusFilter.value === 'active') byStatus = base.filter(u => !!u.isActive)
+    if (statusFilter.value === 'inactive') byStatus = base.filter(u => !u.isActive)
+
+    // búsqueda por nombre, apellido o email
+    const termKey = toKey(searchTerm.value)
+    if (!termKey) return byStatus
+
+    return byStatus.filter(u => {
+        const nameKey = toKey(u.name)
+        const lastKey = toKey(u.last_name)
+        const emailKey = toKey(u.email)
+        return nameKey.includes(termKey) || lastKey.includes(termKey) || emailKey.includes(termKey)
+    })
+})
+
+const clearFilters = () => {
+    searchTerm.value = ''
+    statusFilter.value = 'all'
+}
 
 const goToCreate = () => {
     router.push({ name: 'CreateUser' })
@@ -84,52 +146,44 @@ const editUser = (userId) => {
     router.push({ name: 'EditUser', params: { id: userId } })
 }
 
-const deactivateUser = async (id) => {
-    const result = await Swal.fire({
-        title: 'Desactivar usuario',
-        text: '¿Estás seguro de que querés desactivar este usuario?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, desactivar',
-        cancelButtonText: 'Cancelar'
-    })
-
-    if (result.isConfirmed) {
-        await userStore.deactivateUser(id)
-        showToast({
-            message: 'El usuario fue desactivado correctamente.',
-            type: 'success'
-        })
-    }
-}
-
-const activateUser = async (id) => {
-    const result = await Swal.fire({
-        title: 'Activar usuario',
-        text: '¿Querés volver a activar este usuario?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, activar',
-        cancelButtonText: 'Cancelar'
-    })
-
-    if (result.isConfirmed) {
-        await userStore.activateUser(id)
-        showToast({
-            message: 'El usuario fue activado correctamente.',
-            type: 'success'
-        })
-    }
-}
-
 const showUser = (user) => {
-    selectedUser = user
+    selectedUser.value = user
     showModal.value = true
 }
 
 const closeModal = () => {
     showModal.value = false
-    selectedUser = null
+    selectedUser.value = null
+}
+
+// Activar/Desactivar con confirmación y toast
+const onToggleActive = async (row) => {
+    const nextState = !row.isActive
+    const actionText = nextState ? 'activar' : 'desactivar'
+
+    const result = await Swal.fire({
+        title: `${nextState ? 'Activar' : 'Desactivar'} usuario`,
+        text: `¿Confirmás ${actionText} a "${row?.name ?? row.id}"?`,
+        icon: nextState ? 'question' : 'warning',
+        showCancelButton: true,
+        confirmButtonText: `Sí, ${actionText}`,
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+    })
+    if (!result.isConfirmed) return
+
+    try {
+        await userStore.toggleActive(row.id, nextState)
+        showToast({
+            type: 'success',
+            message: nextState ? 'Usuario activado correctamente.' : 'Usuario desactivado correctamente.',
+        })
+    } catch {
+        showToast({
+            type: 'error',
+            message: nextState ? 'No se pudo activar el usuario.' : 'No se pudo desactivar el usuario.',
+        })
+    }
 }
 </script>
 

@@ -39,7 +39,6 @@ onMounted(async () => {
         if (fresh) {
             player.value = { ...fresh } // usa mapper (nickname, position, etc.)
         } else if (!cached) {
-            showToast({ type: 'error', message: 'Jugador no encontrado' })
             router.push({ name: 'IndexPlayer' })
         }
     } catch {

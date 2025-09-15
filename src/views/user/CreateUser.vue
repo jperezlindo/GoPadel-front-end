@@ -50,7 +50,6 @@ const handleCreate = async (payload) => {
         showCancelButton: true,
         confirmButtonText: 'Sí, crear',
         cancelButtonText: 'Cancelar',
-        reverseButtons: true,
     })
     if (!result.isConfirmed) return
 

@@ -1,8 +1,22 @@
 <template>
   <div>
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-2xl font-bold text-gray-800">Torneos Abiertos</h2>
-      <button @click="goToCreate" class="btn-primary w-auto px-4">+ Nuevo Torneo</button>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <h2 class="text-2xl font-bold text-gray-800">Torneos</h2>
+      <button @click="goToCreate" class="btn-primary w-full sm:w-auto px-4">+ Nuevo Torneo</button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <input v-model="searchName" type="text" placeholder="Buscar por nombre de torneo…"
+        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <input v-model="searchFacility" type="text" placeholder="Buscar por nombre del facility…"
+        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <select v-model="statusFilter"
+        class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="all">Todos</option>
+        <option value="active">Abiertos</option>
+        <option value="inactive">Cerrados</option>
+      </select>
     </div>
 
     <div v-if="tournamentStore.loading" class="py-6 text-gray-600">Cargando torneos…</div>
@@ -10,11 +24,13 @@
       {{ tournamentStore.error.message || 'Error al cargar torneos' }}
     </div>
 
-    <ListTable v-else :columns="columns" :data="openTournaments">
+    <ListTable v-else :columns="columns" :data="filteredTournaments">
       <template #actions="{ row }">
         <button @click="viewTournament(row)" class="text-green-600 hover:underline mr-2">Ver</button>
         <button @click="editTournament(row.id)" class="text-blue-600 hover:underline mr-2">Editar</button>
-        <button @click="closeTournament(row.id)" class="text-yellow-600 hover:underline mr-2">Cerrar</button>
+        <button @click="toggleTournament(row)" class="text-yellow-600 hover:underline mr-2">
+          {{ row.isActive ? 'Cerrar' : 'Abrir' }}
+        </button>
         <button @click="deleteTournament(row.id)" class="text-red-600 hover:underline">Eliminar</button>
       </template>
     </ListTable>
@@ -36,10 +52,8 @@ import Swal from 'sweetalert2'
 
 import { showToast } from '@/utils/alerts.js'
 import { formatDateLongEs } from '@/utils/dateUtils'
-
 import ListTable from '@/components/ListTable.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
-
 import { useTournamentStore } from '@/stores/useTournamentStore'
 
 const router = useRouter()
@@ -49,45 +63,82 @@ const showModal = ref(false)
 const selectedTournament = ref(null)
 const categories = ref([])
 
+/** Controles de búsqueda y filtro */
+const searchName = ref('')
+const searchFacility = ref('')
+const statusFilter = ref('all') // all | active | inactive
+
+/** Columnas (sin estado) */
 const columns = [
   { label: 'Nombre', field: 'name' },
+  { label: 'Facility', field: 'facility_name' },
   { label: 'Fecha Inicio', field: 'date_start' },
   { label: 'Fecha Cierre', field: 'date_end' },
 ]
 
+const norm = (v) => (v ?? '').toString().toLowerCase().trim()
 const tournaments = computed(() => tournamentStore.tournaments || [])
-const openTournaments = computed(() =>
-  tournaments.value
-    .filter(t => t.isActive)
+
+const filteredTournaments = computed(() => {
+  const qName = norm(searchName.value)
+  const qFacility = norm(searchFacility.value)
+  const wantActive = statusFilter.value === 'active'
+  const wantInactive = statusFilter.value === 'inactive'
+
+  return (tournaments.value || [])
+    .filter(t => {
+      if (wantActive && !t.isActive) return false
+      if (wantInactive && t.isActive) return false
+      const name = norm(t.name)
+      const facilityName = norm(t.facility?.name ?? t.facility_name ?? t.facilityName ?? '')
+      const matchesName = qName ? name.includes(qName) : true
+      const matchesFacility = qFacility ? facilityName.includes(qFacility) : true
+      return matchesName && matchesFacility
+    })
     .map(t => ({
       ...t,
-      date_start: formatDateLongEs(t.date_start), // asumiendo que tu campo es date_start
-      date_end: formatDateLongEs(t.date_end) // asumiendo que tu campo es date_end
+      facility_name: t.facility?.name ?? t.facility_name ?? t.facilityName ?? '—',
+      date_start: formatDateLongEs(t.date_start),
+      date_end: formatDateLongEs(t.date_end),
     }))
-)
+})
 
 const goToCreate = () => router.push({ name: 'CreateTournament' })
+const editTournament = (id) => router.push({ name: 'EditTournament', params: { id } })
 
-const editTournament = (tournamentId) => router.push({ name: 'EditTournament', params: { id: tournamentId } })
+/** Abrir/Cerrar según estado actual (usa SIEMPRE el store) */
+const toggleTournament = async (row) => {
+  const isActive = !!row.isActive
+  const title = isActive ? 'Cerrar torneo' : 'Abrir torneo'
+  const text = isActive
+    ? '¿Estás seguro de que querés cerrar este torneo? No podrás agregar más categorías ni inscribir jugadores.'
+    : '¿Querés volver a abrir este torneo? Podrás gestionar categorías e inscripciones nuevamente.'
+  const confirmText = isActive ? 'Sí, cerrar' : 'Sí, abrir'
 
-const closeTournament = async (id) => {
   const result = await Swal.fire({
-    title: 'Cerrar torneo',
-    text: '¿Estás seguro de que querés cerrar este torneo? No podrás agregar más categorías ni inscribir jugadores.',
-    icon: 'warning',
+    title, text, icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Sí, cerrar',
+    confirmButtonText: confirmText,
     cancelButtonText: 'Cancelar'
   })
   if (!result.isConfirmed) return
 
   try {
-    await tournamentStore.closeTournament(id)
-    showToast({ message: 'El torneo fue cerrado correctamente.', type: 'success' })
-    await tournamentStore.fetchTournaments()
+    // Forzamos el estado deseado y delegamos en el store
+    await tournamentStore.toggleActive(row.id, !isActive)
+
+    // Refrescamos SOLO ese torneo para evitar otra llamada de lista completa
+    await tournamentStore.fetchTournamentById(row.id)
+
+    showToast({
+      message: isActive
+        ? 'El torneo fue cerrado correctamente.'
+        : 'El torneo fue abierto correctamente.',
+      type: 'success'
+    })
   } catch (e) {
-    console.log('No se pudo cerrar el torneo:', e)
-    showToast({ message: e?.message || 'Error al cerrar el torneo', type: 'error' })
+    console.error('No se pudo cambiar el estado del torneo:', e)
+    showToast({ message: e?.message || 'Error al cambiar el estado del torneo', type: 'error' })
   }
 }
 
@@ -104,10 +155,6 @@ const deleteTournament = async (id) => {
 
   try {
     await tournamentStore.deleteTournament(id)
-
-    // Si seguís usando esta lógica de limpieza de categorías en backend:
-    // await categoryStore.deleteCategories(id)
-
     showToast({ message: 'El torneo fue cerrado correctamente.', type: 'success' })
     await tournamentStore.fetchTournaments()
     router.push({ name: 'IndexTournament' })
@@ -118,7 +165,6 @@ const deleteTournament = async (id) => {
 
 const viewTournament = (tournament) => {
   selectedTournament.value = tournament
-  // ✅ Tomamos categorías directamente del torneo recibido por API/store:
   categories.value = Array.isArray(tournament.categories) ? tournament.categories : []
   showModal.value = true
 }

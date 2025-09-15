@@ -193,7 +193,6 @@ const handleCancel = async () => {
         showCancelButton: true,
         confirmButtonText: 'Sí, cancelar',
         cancelButtonText: 'Volver',
-        reverseButtons: true,
     })
     if (result.isConfirmed) emit('cancel')
 }

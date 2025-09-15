@@ -96,7 +96,6 @@ const handleUpdate = async (updatedData) => {
         showCancelButton: true,
         confirmButtonText: 'Sí, guardar',
         cancelButtonText: 'Cancelar',
-        reverseButtons: true,
     })
     if (!result.isConfirmed) return
 

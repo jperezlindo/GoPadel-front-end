@@ -139,7 +139,7 @@ const editTournament = async () => {
     // Llamada al store / API
     // Si tu store usa (id, body):
     await tournamentStore.updateTournament(tournament.value.id, payload)
-    // Si tu store espera un objeto con id y data, usa en su lugar:
+    // Si store espera un objeto con id y data, usar en su lugar:
     // await tournamentStore.updateTournament({ id: tournament.value.id, data: payload })
 
     showToast({ message: 'Torneo y categorías actualizados correctamente.', type: 'success' })

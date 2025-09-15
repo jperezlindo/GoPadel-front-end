@@ -37,7 +37,7 @@ const routes = [
       { path: 'players/info', name: 'InfoPlayer', component: () => import('@/views/player/infoPlayer.vue') },
       // Torneo abiertos para Jugadores
       { path: 'open-tournaments', name: 'OpenTournaments', component: () => import('@/views/tournament/OpenTournaments.vue') },
-      { path: 'registration-tournament/:id', name: 'RegistrationTournament', component: () => import('@/views/registrations/RegistrationTournament.vue') }
+      { path: 'registration-tournament/:id', name: 'RegistrationTournament', component: () => import('@/views/registrations/RegistrationPlayer.vue') }
     ]
   },
   // Ruta para manejar 404 - Not Found

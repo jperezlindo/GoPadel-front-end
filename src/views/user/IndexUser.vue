@@ -168,7 +168,6 @@ const onToggleActive = async (row) => {
         showCancelButton: true,
         confirmButtonText: `Sí, ${actionText}`,
         cancelButtonText: 'Cancelar',
-        reverseButtons: true,
     })
     if (!result.isConfirmed) return
 

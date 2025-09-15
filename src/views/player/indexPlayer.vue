@@ -130,6 +130,7 @@ onMounted(async () => {
   }
   if (!categoryStore.categories?.length && categoryStore.fetchCategories) {
     await categoryStore.fetchCategories()
+    console.log('Categories loaded', categoryStore.categories)
   }
   if (!userStore.users?.length && userStore.fetchUsers) {
     await userStore.fetchUsers()

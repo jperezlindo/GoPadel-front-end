@@ -37,13 +37,13 @@ const toApi = (frontItem = {}) => {
     facility_id: Number.isFinite(facilityId) && facilityId > 0 ? facilityId : null,
     categories: Array.isArray(frontItem.categories)
       ? frontItem.categories.map(c => ({
-          // id opcional si tu API lo usa para upsert; si no, quitalo
-          id: c?.id ?? undefined,
-          name: c?.name ?? '',
-          price: Number(c?.price ?? 0),
-          // La API espera "category" como ID de la categoría
-          category: Number(c?.category ?? c?.category_id ?? c?.id ?? 0)
-        }))
+        // id opcional si tu API lo usa para upsert; si no, quitalo
+        id: c?.id ?? undefined,
+        name: c?.name ?? '',
+        price: Number(c?.price ?? 0),
+        // La API espera "category" como ID de la categoría
+        category: Number(c?.category ?? c?.category_id ?? c?.id ?? 0)
+      }))
         .filter(cat =>
           cat.name !== '' &&
           Number.isFinite(cat.price) &&
@@ -207,6 +207,51 @@ export const useTournamentStore = defineStore('tournament', () => {
     }
   }
 
+  // ==== OPEN (soft-on): is_active = true ====
+  const openTournament = async (id) => {
+    error.value = null
+    try {
+      const tournamentId = Number(id)
+      if (!Number.isFinite(tournamentId)) {
+        throw new Error('Tournament id inválido')
+      }
+
+      const response = await handleApi.patch(`${BASE}${tournamentId}/`, { is_active: true })
+      const data = response?.data
+
+      if (data) {
+        const saved = fromApi(data)
+        const idx = tournaments.value.findIndex(t => t.id === tournamentId)
+        if (idx !== -1) tournaments.value[idx] = saved
+        else tournaments.value.push(saved)
+        return saved
+      } else {
+        const idx = tournaments.value.findIndex(t => t.id === tournamentId)
+        if (idx !== -1) {
+          tournaments.value[idx] = {
+            ...tournaments.value[idx],
+            isActive: true
+          }
+          return tournaments.value[idx]
+        }
+        return { id: tournamentId, isActive: true }
+      }
+    } catch (e) {
+      error.value = e
+      console.error('No se pudo abrir el torneo:', e)
+      throw e
+    }
+  }
+
+  // ==== TOGGLE (delegando en open/close) ====
+  // Si nextState es booleano, lo fuerza; si no, invierte el estado actual.
+  const toggleActive = async (id, nextState = undefined) => {
+    const item = getTournamentById(id)
+    const isActive = !!item?.isActive
+    const desired = (typeof nextState === 'boolean') ? nextState : !isActive
+    return desired ? openTournament(id) : closeTournament(id)
+  }
+
   // ==== DELETE ====
   // Si tu API hace delete físico, esto lo refleja. Si preferís soft-delete,
   // en vez de DELETE podrías hacer PATCH con is_active=false.
@@ -250,6 +295,8 @@ export const useTournamentStore = defineStore('tournament', () => {
     createTournament,
     updateTournament,
     closeTournament,
+    openTournament,
+    toggleActive,
     deleteTournament,
     // utils
     getTournamentById,

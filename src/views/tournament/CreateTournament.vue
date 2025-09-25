@@ -1,82 +1,94 @@
+<!-- src/views/tournament/CreateTournament.vue -->
 <template>
   <div>
     <StepIndicator :steps="['Información del Torneo', 'Categorías', 'Confirmación']" :currentStep="step" />
-    
-    <TournamentForm
-      v-if="step === 1"
-      :modelValue="tournament"
-      @submit="handleTournamentCreate"
-      @cancel="handleTournamentCancel"
-    />
 
-    <TournamentCategoryForm
-      v-if="step === 2"
-      :availableCategories="availableCategories"
-      :initialCategories="categories"
-      @submit-categories="handleTournamentCategoryCreate"
-    />
+    <TournamentForm v-if="step === 1" :modelValue="tournamentForm" @submit="handleTournamentCreate"
+      @cancel="handleTournamentCancel" />
 
-    <ShowTournament
-      v-if="step === 3 && tournament && categories.length"
-      :tournament="tournament"
-      :categories="categories"
-      :editable="true"
-      :isEditing="false"
-      @detailsConfirm="createTournament"
-      @cancel="handleTournamentCancel"
-    />
+    <TournamentCategoryForm v-if="step === 2" :availableCategories="availableCategories" :categories="categoriesRows"
+      @submit-categories="handleTournamentCategoryCreate" @cancel="handleTournamentCancel" />
+
+    <ShowTournament v-if="step === 3 && categoriesRows.length" :tournament="tournamentPreview"
+      :categories="categoriesPreview" :editable="true" :isEditMode="false" @detailsConfirm="createTournament"
+      @cancel="handleTournamentCancel" />
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted  } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-
 import Swal from 'sweetalert2'
-
-import { showToast } from '@/utils/alerts.js'
-import { formatDateISO, toFullISO } from '@/utils/dateUtils'
-import { parseApiError } from '@/utils/handleApi'
 
 import StepIndicator from '@/components/StepIndicator.vue'
 import TournamentForm from '@/components/TournamentForm.vue'
 import TournamentCategoryForm from '@/components/TournamentCategoryForm.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
 
-import { useTournamentStore } from '@/stores/useTournamentStore.js'
-import { useTournamentCategoryStore } from '@/stores/useTournamentCategoryStore.js'
-import { useCategoryStore } from '@/stores/useCategoryStore.js'
+import { showToast } from '@/utils/alerts'
+import { parseApiError } from '@/utils/handleApi'
+import type { TournamentFront, TournamentCategoryFront } from '@/services/tournamentApi'
+import { useTournamentStore } from '@/stores/useTournamentStore'
+import { useCategoryStore } from '@/stores/useCategoryStore'
 
-const tournamentStore = useTournamentStore()
-const tournamentCategoryStore = useTournamentCategoryStore()
-const categoryStore = useCategoryStore()
+/** ===== Tipos locales ===== */
+type TournamentFormModel = {
+  name: string
+  date_start: string // 'YYYY-MM-DD' (sin hora)
+  date_end: string   // 'YYYY-MM-DD' (sin hora)
+}
+
+type SimpleCategory = { id: number; name: string }
+type TournamentCategoryRow = {
+  name: string
+  price: number
+  category_id: number | '' // select arranca en '' y luego pasa a number
+  isActive?: boolean
+}
+
+/** ===== Constantes ===== */
+const DEFAULT_FACILITY_ID = 1
+
+/** ===== Stores / Router ===== */
 const router = useRouter()
+const tournamentStore = useTournamentStore()
+const categoryStore = useCategoryStore()
 
+/** ===== Estado UI ===== */
 const step = ref(1)
-const categories = ref([])
-const availableCategories = ref([])
-const tournament = ref({
+const availableCategories = ref<SimpleCategory[]>([])
+
+// Paso 1
+const tournamentForm = ref<TournamentFormModel>({
   name: '',
-  start_date: '',
-  end_date: '',
-  facility_id: 1,
-  isActive: true
+  date_start: '',
+  date_end: '',
 })
 
+// Paso 2
+const categoriesRows = ref<TournamentCategoryRow[]>([])
 
-
-onMounted( async () => {
-  await categoryStore.fetchCategories()
-  availableCategories.value = categoryStore.categories
+/** ===== Carga catálogo categorías ===== */
+onMounted(async () => {
+  try {
+    await categoryStore.fetchCategories()
+    availableCategories.value = (categoryStore.categories || []).map((c: any) => ({
+      id: Number(c?.id ?? 0),
+      name: String(c?.name ?? ''),
+    }))
+  } catch {
+    /* el store ya loguea el error */
+  }
 })
 
-const handleTournamentCreate = (data) => {
-  tournament.value = { ...data }
+/** ===== Handlers ===== */
+const handleTournamentCreate = (data: TournamentFormModel) => {
+  tournamentForm.value = { ...data } // mantiene YYYY-MM-DD
   step.value = 2
 }
 
-const handleTournamentCategoryCreate = (categoriesParticipants) => {
-  categories.value = [...categoriesParticipants]
+const handleTournamentCategoryCreate = (cats: TournamentCategoryRow[]) => {
+  categoriesRows.value = Array.isArray(cats) ? [...cats] : []
   step.value = 3
 }
 
@@ -89,74 +101,94 @@ const handleTournamentCancel = async () => {
     confirmButtonText: 'Sí, cancelar',
     cancelButtonText: 'Volver'
   })
-
   if (result.isConfirmed) {
-    tournament.value = { name: '', start_date: '', end_date: '' }
-    categories.value = []
-    showToast({
-      message: 'El torneo fue cancelado.',
-      type: 'success'
-    })
+    tournamentForm.value = { name: '', date_start: '', date_end: '' }
+    categoriesRows.value = []
+    showToast({ message: 'El torneo fue cancelado.', type: 'success' })
     router.push({ name: 'IndexTournament' })
   }
 }
 
+/** ===== Vista previa para ShowTournament ===== */
+const tournamentPreview = computed<TournamentFront>(() => ({
+  id: 0,
+  name: String(tournamentForm.value?.name ?? ''),
+  date_start: tournamentForm.value?.date_start || null, // YYYY-MM-DD
+  date_end: tournamentForm.value?.date_end || null,     // YYYY-MM-DD
+  facility_id: DEFAULT_FACILITY_ID,
+  facility: '',
+  facility_name: '',
+  isActive: true,
+  categories: [], // ShowTournament recibe categories aparte
+}))
+
+const categoriesPreview = computed<TournamentCategoryFront[]>(() => {
+  const rows = Array.isArray(categoriesRows.value) ? categoriesRows.value : []
+  return rows.map(r => ({
+    name: String(r?.name ?? '').trim(),
+    price: Number(r?.price ?? 0),
+    is_active: true,
+    // para preview da igual, pero mantengo ambos por tipado laxo
+    category_id: typeof r?.category_id === 'string' ? Number(r.category_id) : (r?.category_id ?? null),
+    category: typeof r?.category_id === 'string' ? Number(r.category_id) : (r?.category_id ?? null),
+  }))
+})
+
+/** ===== POST create ===== */
 const createTournament = async () => {
   try {
     const result = await Swal.fire({
       title: '¿Crear torneo?',
-      text: '¿Estás seguro de que querés crear este torneo? Esta acción guardará la información ingresada.',
+      text: '¿Estás seguro de que querés crear este torneo?',
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, crear',
-      cancelButtonText: 'Cancelar'
+      cancelButtonText: 'Cancelar',
     })
     if (!result.isConfirmed) return
 
-    // Validaciones mínimas antes de postear
-    const facilityId = Number(tournament.value?.facility_id ?? tournament.value?.facility?.id ?? tournament.value?.facility ?? 1)
-    const errors = []
-    if (!tournament.value?.name || !String(tournament.value.name).trim()) errors.push('El nombre es obligatorio.')
-    if (!tournament.value?.date_start) errors.push('La fecha de inicio es obligatoria.')
-    if (!tournament.value?.date_end) errors.push('La fecha de finalización es obligatoria.')
-    if (!Number.isFinite(facilityId) || facilityId <= 0) errors.push('Debe seleccionar una sede válida.')
+    const t = tournamentForm.value
+    const rows = categoriesRows.value
 
+    // Validaciones mínimas FRONT
+    const errors: string[] = []
+    if (!t.name || !String(t.name).trim()) errors.push('El nombre es obligatorio.')
+    if (!t.date_start) errors.push('La fecha de inicio es obligatoria.')
+    if (!t.date_end) errors.push('La fecha de finalización es obligatoria.')
+    if (!rows.length) errors.push('Debés agregar al menos una categoría.')
     if (errors.length) {
       await Swal.fire('Datos incompletos', errors.join('\n'), 'warning')
       return
     }
 
-    // Payload FRONT (dejamos que el store lo mapee con toApi)
+    // 🔴 IMPORTANTE: Formato EXACTO como Postman (sin hora/offset)
     const payload = {
-      name: String(tournament.value.name).trim(),
-      date_start: tournament.value.date_start, // puede ser "YYYY-MM-DD" o ISO
-      date_end: tournament.value.date_end,
-      is_active: Boolean(tournament.value?.is_active ?? tournament.value?.isActive),
-      facility_id: facilityId,
-      categories: (categories?.value ?? newCategories?.value ?? []).map(c => ({
-        id: c?.id ?? undefined,
-        name: c?.name ?? '',
-        price: Number(c?.price ?? 0),
-        // En el front puede venir con cualquiera de estos nombres
-        category: Number(c?.category ?? c?.category_id ?? c?.id ?? 0)
-      }))
+      name: String(t.name).trim(),
+      date_start: t.date_start, // 'YYYY-MM-DD'
+      date_end: t.date_end,     // 'YYYY-MM-DD'
+      is_active: true,
+      facility_id: DEFAULT_FACILITY_ID,
+      categories: rows
+        .map(r => ({
+          name: String(r?.name ?? '').trim(),
+          price: Number(r?.price ?? 0),
+          // El backend espera "category" (PK de Category)
+          category: typeof r?.category_id === 'string'
+            ? Number(r.category_id)
+            : (r?.category_id ?? null),
+        }))
+        // Evito mandar basura
+        .filter(c => c.name && Number.isFinite(c.price) && (c.category === null || (typeof c.category === 'number' && c.category > 0))),
     }
 
-    const created = await tournamentStore.createTournament(payload) // ahora el store usa este payload
-    const tournamentId = created?.id ?? created
+    const created = await tournamentStore.createTournament(payload as any)
+    void created // por si no lo usás
 
     showToast({ message: 'El torneo fue creado exitosamente.', type: 'success' })
     router.push({ name: 'IndexTournament' })
-
-  } catch (error) {
-    console.error('Create failed:', error?.response?.data || error)
-    const msg = parseApiError(error)
-    Swal.fire('Error', msg || 'Ocurrió un problema al crear el torneo.', 'error')
+  } catch (error: any) {
+    const msg = parseApiError(error) || 'Ocurrió un problema al crear el torneo.'
+    Swal.fire('Error', msg, 'error')
   }
 }
-
 </script>
-
-<style scoped>
-/* estilos opcionales */
-</style>

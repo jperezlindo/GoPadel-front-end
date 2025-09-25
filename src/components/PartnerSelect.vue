@@ -31,44 +31,63 @@
         </div>
 
         <!-- Seleccionado -->
-        <p v-if="modelValue" class="mt-2 text-sm text-gray-600">
+        <p v-if="modelValue !== null" class="mt-2 text-sm text-gray-600">
             Seleccionado:
             <span class="font-medium">{{ selectedText }}</span>
-            <button type="button" class="ml-2 text-blue-600 hover:underline" @click="$emit('update:modelValue', null)">
+            <button type="button" class="ml-2 text-blue-600 hover:underline" @click="emit('update:modelValue', null)">
                 Quitar
             </button>
         </p>
     </div>
 </template>
 
-<script setup>
-import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+<script setup lang="ts">
+import { ref, watch, computed, onMounted, onBeforeUnmount, type Ref } from 'vue'
 import { handleApi, normalizeApiError } from '@/utils/handleApi'
+
+/**
+ * Tipos mínimos basados en el contrato actual del componente.
+ */
+type MaybeEl = HTMLElement | null
+type UserLite = { name?: string; email?: string } | null | undefined
+type PlayerLite = { id: number; nick_name?: string; user?: UserLite } // resultados de /players
+type UserResult = { id?: number; name?: string; email?: string } // resultados de /users (merge defensivo)
 
 /**
  * Props & emits
  */
-const props = defineProps({
-    modelValue: { type: [Number, null], default: null },
-    placeholder: { type: String, default: 'Buscar por nick, nombre o email…' },
-})
-const emit = defineEmits(['update:modelValue'])
+const props = withDefaults(
+    defineProps < {
+        modelValue: number | null
+    placeholder?: string
+    } > (),
+    {
+        modelValue: null,
+        placeholder: 'Buscar por nick, nombre o email…',
+    }
+)
+
+const emit = defineEmits < {
+  (e: 'update:modelValue', value: number | null): void
+}> ()
 
 /**
  * State
  */
-const rootEl = ref(null)
-const query = ref('')
-const results = ref([])        // [{ id, nick_name, user: { name, email } }, ...]
-const open = ref(false)
-const isLoading = ref(false)
-let debounceId = null
+const rootEl: Ref<MaybeEl> = ref(null)
+const query = ref < string > ('')
+const results = ref < PlayerLite[] > ([]) // [{ id, nick_name, user: { name, email } }, ...]
+const open = ref < boolean > (false)
+const isLoading = ref < boolean > (false)
+let debounceId: ReturnType<typeof setTimeout> | null = null
 
 /**
  * Helpers de mapeo
  */
-const displayName = (p) => p?.nick_name || p?.user?.name || p?.user?.email || `Player #${p?.id}`
-const displayMeta = (p) => {
+const displayName = (p: PlayerLite): string =>
+    p?.nick_name || (p?.user?.name ?? '') || (p?.user?.email ?? '') || `Player #${p?.id}`
+
+const displayMeta = (p: PlayerLite): string => {
     const name = p?.user?.name ? p.user.name : ''
     const email = p?.user?.email ? ` · ${p.user.email}` : ''
     return `${name}${email}`.trim()
@@ -77,52 +96,50 @@ const displayMeta = (p) => {
 /**
  * Texto del seleccionado (si está en results)
  */
-const selectedText = computed(() => {
+const selectedText = computed < string > (() => {
     const current = results.value.find(r => r.id === props.modelValue)
-    return current ? displayName(current) : (props.modelValue ? `Player #${props.modelValue}` : '')
+    return current ? displayName(current) : props.modelValue ? `Player #${props.modelValue}` : ''
 })
 
 /**
  * Búsqueda principal: players
  */
-const searchPlayers = async (term) => {
+const searchPlayers = async (term: string): Promise<PlayerLite[]> => {
     const res = await handleApi.get(`/api/v1/players/`, { params: { search: term } })
-    const data = res?.data ?? res
-    return Array.isArray(data) ? data : (data?.results ?? [])
+    const data = (res as any)?.data ?? res
+    return Array.isArray(data) ? (data as PlayerLite[]) : ((data?.results ?? []) as PlayerLite[])
 }
 
 /**
- * (Opcional fallback) búsqueda en users para enriquecer nombres/emails
- * Si querés desactivarlo por ahora, comentá esta función + su uso
+ * (Opcional fallback) búsqueda en users para enriquecer nombres/emails.
+ * Se mantiene por compatibilidad; si no se necesita, puede comentarse la llamada.
  */
-const searchUsers = async (term) => {
+const searchUsers = async (term: string): Promise<UserResult[]> => {
     const res = await handleApi.get(`/api/v1/users/`, { params: { search: term } })
-    const data = res?.data ?? res
-    return Array.isArray(data) ? data : (data?.results ?? [])
+    const data = (res as any)?.data ?? res
+    return Array.isArray(data) ? (data as UserResult[]) : ((data?.results ?? []) as UserResult[])
 }
 
 /**
- * Merge básico players + users (por email o name). Si tu API de players ya trae user anidado,
- * este merge no suele ser necesario. Lo dejo defensivo.
+ * Merge básico players + users (por email o name). Si players ya trae user anidado,
+ * este merge no es necesario; se conserva defensivo sin cambiar el contrato.
  */
-const mergePlayersUsers = (players, users) => {
+const mergePlayersUsers = (players: PlayerLite[], users: UserResult[]): PlayerLite[] => {
     if (!Array.isArray(players) || !Array.isArray(users)) return players || []
-    const byEmail = new Map(users.map(u => [String(u?.email || '').toLowerCase(), u]))
+    const byEmail = new Map < string, UserResult> (
+        users.map(u => [String(u?.email || '').toLowerCase(), u])
+    )
     return players.map(p => {
-        if (p?.user?.email) {
-            const u = byEmail.get(String(p.user.email).toLowerCase())
-            if (u) {
-                return { ...p, user: { ...u, ...(p.user || {}) } }
-            }
-        }
-        return p
+        const email = String(p?.user?.email || '').toLowerCase()
+        const u = email ? byEmail.get(email) : undefined
+        return u ? { ...p, user: { ...u, ...(p.user || {}) } } : p
     })
 }
 
 /**
  * Ejecutar búsqueda (con manejo de loading/errores)
  */
-const runSearch = async (term) => {
+const runSearch = async (term: string) => {
     if (!term || term.length < 2) {
         results.value = []
         return
@@ -130,14 +147,13 @@ const runSearch = async (term) => {
     isLoading.value = true
     try {
         const players = await searchPlayers(term)
-        // Fallback opcional a users (podés comentar estas 2 líneas si no querés merge)
-        const users = await searchUsers(term).catch(() => [])
+        // Fallback opcional a users para enriquecer (mantengo try/catch silencioso)
+        const users = await searchUsers(term).catch(() => [] as UserResult[])
         results.value = mergePlayersUsers(players, users)
     } catch (e) {
-        const n = normalizeApiError(e)
-        // Podrías mostrar un toast si querés; por ahora solo vaciamos resultados
+        const _n = normalizeApiError(e as any)
         results.value = []
-        // console.error('search error:', n.message)
+        // Se mantiene sin toast para no alterar UX actual
     } finally {
         isLoading.value = false
     }
@@ -155,7 +171,7 @@ const onInput = () => {
 /**
  * Selección
  */
-const select = (p) => {
+const select = (p: PlayerLite) => {
     emit('update:modelValue', p.id)
     open.value = false
 }
@@ -163,9 +179,10 @@ const select = (p) => {
 /**
  * Cerrar al click afuera
  */
-const onClickOutside = (e) => {
-    if (!rootEl.value) return
-    if (!rootEl.value.contains(e.target)) open.value = false
+const onClickOutside = (e: MouseEvent) => {
+    const target = e.target as Node | null
+    if (!rootEl.value || !target) return
+    if (!rootEl.value.contains(target)) open.value = false
 }
 
 onMounted(() => {
@@ -178,10 +195,13 @@ onBeforeUnmount(() => {
 })
 
 /**
- * Si quisieras precargar el nombre cuando ya viene un modelValue,
- * acá podríamos hacer GET /api/v1/players/:id (cuando exista ese endpoint).
+ * Si se quisiera precargar el nombre cuando ya viene un modelValue,
+ * se podría hacer GET /api/v1/players/:id aquí (cuando exista ese endpoint).
  */
-watch(() => props.modelValue, () => {
-    // noop; mantenemos selectedText con resultados recientes o placeholder
-})
+watch(
+    () => props.modelValue,
+    () => {
+        // noop; selectedText se apoya en resultados recientes o en el placeholder
+    }
+)
 </script>

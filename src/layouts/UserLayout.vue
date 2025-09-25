@@ -1,4 +1,5 @@
 <template>
+  <!-- UserLayout -->
   <div class="min-h-screen bg-gray-50">
     <!-- Navbar persistente -->
     <UserNavbar />
@@ -10,6 +11,6 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import UserNavbar from '@/components/UserNavbar.vue'
 </script>

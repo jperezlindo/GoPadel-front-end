@@ -1,1 +1,7 @@
-module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };
+// postcss.config.js (ESM)
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}

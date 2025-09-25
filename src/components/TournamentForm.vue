@@ -1,3 +1,4 @@
+<!-- Tournament Form Component -->
 <template>
   <div class="max-w-xl mx-auto p-6 bg-white rounded-2xl shadow-md">
     <h2 class="text-2xl font-bold mb-4">{{ isEditMode ? 'Editar Torneo' : 'Registrar Torneo' }}</h2>
@@ -19,65 +20,88 @@
       </div>
 
       <div class="flex gap-2">
-        <button
-          type="button"
-          @click="handleCancel"
-          class="bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500 transition w-full"
-        >
+        <button type="button" @click="handleCancel"
+          class="bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500 transition w-full">
           Cancelar
         </button>
 
-        <button
-          type="submit"
-          class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
-        >
+        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition">
           Siguiente
         </button>
       </div>
     </form>
-
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { reactive, watch } from 'vue'
 
-const props = defineProps({
-  modelValue: {
-    type: Object,
-    default: () => ({
-      name: '',
-      date_start: '',
-      date_end: '',
-    })
-  },
-  isEditMode: {
-    type: Boolean,
-    default: false
-  },
+/**
+ * Mantengo el contrato de props/emits y tipado fuerte en TS.
+ * Se corrige la validación usando las claves reales: date_start y date_end.
+ */
+
+type TournamentFormModel = {
+  name: string
+  date_start: string // formato 'YYYY-MM-DD'
+  date_end: string   // formato 'YYYY-MM-DD'
+}
+
+const props = withDefaults(defineProps < {
+  modelValue: TournamentFormModel
+  isEditMode?: boolean
+} > (), {
+  modelValue: () => ({
+    name: '',
+    date_start: '',
+    date_end: '',
+  }),
+  isEditMode: false,
 })
 
-const emit = defineEmits(['submit', 'update:modelValue', 'cancel'])
-const localForm = reactive({ ...props.modelValue })
+const emit = defineEmits < {
+  (e: 'submit', payload: TournamentFormModel): void
+  (e: 'update:modelValue', payload: TournamentFormModel): void
+    (e: 'cancel'): void
+}> ()
 
+// Uso un estado local reactivo para editar sin mutar directamente el v-model del padre.
+const localForm = reactive < TournamentFormModel > ({ ...props.modelValue })
+
+// Valido fechas y emito el submit manteniendo el contrato actual
 const emitSubmit = () => {
-  if (new Date(localForm.start_date) > new Date(localForm.end_date)) {
-    alert('La fecha de inicio no puede ser posterior a la fecha de finalización.')
-    return
+  // Convierto a Date solo si hay valores
+  if (localForm.date_start && localForm.date_end) {
+    const start = new Date(localForm.date_start)
+    const end = new Date(localForm.date_end)
+    if (start > end) {
+      alert('La fecha de inicio no puede ser posterior a la fecha de finalización.')
+      return
+    }
   }
-
   emit('submit', { ...localForm })
 }
 
+// Emite cancel sin efectos colaterales
 const handleCancel = () => emit('cancel')
 
-watch(() => props.modelValue, (newVal) => {
-  Object.assign(localForm, newVal)
-}, { deep: true })
+// Sincronizo cambios desde el padre hacia el formulario local
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    Object.assign(localForm, newVal)
+  },
+  { deep: true }
+)
 
-watch(localForm, (newVal) => {
-  emit('update:modelValue', { ...newVal })
-}, { deep: true })
+// Propago cambios locales hacia el v-model del padre
+watch(
+  localForm,
+  (newVal) => {
+    emit('update:modelValue', { ...newVal })
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>

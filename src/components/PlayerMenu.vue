@@ -1,8 +1,30 @@
 <template>
-    <li><router-link :to="{ name: 'OpenTournaments' }" class="hover:text-blue-600" @click="$emit('menu-action')">Torneos Abiertos</router-link></li>
-    <li><router-link :to="''" class="hover:text-blue-600" @click="$emit('menu-action')">Mis Inscripciones</router-link></li>
-    <li><router-link :to="{ name: 'InfoPlayer' }" class="hover:text-blue-600" @click="$emit('menu-action')">Jugador</router-link></li>
+    <!-- Player Menu -->
+    <li>
+        <router-link :to="{ name: 'Home' }" class="hover:text-blue-600" @click="onMenuAction">
+            Inicio
+        </router-link>
+    </li>
+    <li>
+        <router-link :to="{ name: 'OpenTournaments' }" class="hover:text-blue-600" @click="onMenuAction">
+            Torneos Abiertos
+        </router-link>
+    </li>
+    <li>
+        <router-link :to="''" class="hover:text-blue-600" @click="onMenuAction">
+            Mis Inscripciones
+        </router-link>
+    </li>
+    <li>
+        <router-link :to="{ name: 'InfoPlayer' }" class="hover:text-blue-600" @click="onMenuAction">
+            Jugador
+        </router-link>
+    </li>
 </template>
 
-<script setup>
+<script setup lang="ts">
+// Emite 'menu-action' cuando se hace click en cualquier item del menú.
+const emit = defineEmits < { (e: 'menu-action'): void }> ()
+
+const onMenuAction = () => emit('menu-action')
 </script>

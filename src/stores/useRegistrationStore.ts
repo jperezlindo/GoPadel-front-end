@@ -1,4 +1,4 @@
-// src/stores/useRegistrationStore.js
+// src/stores/useRegistrationStore.ts
 // Store Pinia para manejar inscripciones del Player.
 // Reglas:
 //  - UX: pre-chequeo para no permitir duplicado del player en el mismo torneo.
@@ -7,12 +7,18 @@
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { createRegistration, listRegistrations } from '@/services/registrationApi'
+import {
+  createRegistration,
+  listRegistrations,
+  type RegistrationApi,
+  type Paginated,
+} from '@/services/registrationApi'
 import { normalizeApiError } from '@/utils/handleApi'
 
 // Helper para generar un error legible compatible con toasts
-const userFacingError = (message, detail) => {
-  const err = new Error(message)
+const userFacingError = (message: string, detail?: Record<string, string[]>) => {
+  const err: any = new Error(message)
+  // Marco el error como "normalizado" para que el caller lo trate igual que normalizeApiError
   err.__normalized = true
   err.status = 400
   err.message = message
@@ -20,22 +26,31 @@ const userFacingError = (message, detail) => {
   return err
 }
 
+export interface CreateForPlayerArgs {
+  tournamentId: number
+  tournamentCategoryId: number
+  partnerId: number
+  categoryPrice: number
+  paymentReference?: string
+  comment?: string
+}
+
 export const useRegistrationStore = defineStore('registration', () => {
   // ===== State =====
   const isLoading = ref(false)
-  const items = ref([])        // listado de inscripciones (ej: las del player)
-  const lastError = ref(null)
+  const items = ref<RegistrationApi[]>([]) // listado de inscripciones (ej: las del player)
+  const lastError = ref<string | null>(null)
 
   // ===== Actions =====
 
   /** Listado genérico con filtros */
-  const fetch = async (params = {}) => {
+  const fetch = async (params: Record<string, any> = {}) => {
     try {
       isLoading.value = true
       lastError.value = null
       const data = await listRegistrations(params)
       // Soporta respuesta {results: []} o []
-      items.value = Array.isArray(data) ? data : (data?.results ?? [])
+      items.value = Array.isArray(data) ? data : (data as Paginated<RegistrationApi>)?.results ?? []
       return items.value
     } catch (e) {
       const n = normalizeApiError(e)
@@ -47,21 +62,15 @@ export const useRegistrationStore = defineStore('registration', () => {
   }
 
   /** Listar inscripciones del player (opcionalmente filtradas por torneo) */
-  const fetchMine = async (playerId, tournamentId) => {
-    const params = { player_id: playerId }
+  const fetchMine = async (playerId: number, tournamentId?: number) => {
+    const params: Record<string, any> = { player_id: playerId }
     if (tournamentId) params.tournament_id = tournamentId
     return fetch(params)
   }
 
   /**
    * Crear inscripción para el Player actual.
-   * @param {Object} args
-   * @param {number} args.tournamentId           Torneo (para pre-check UX)
-   * @param {number} args.tournamentCategoryId   Categoría elegida
-   * @param {number} args.partnerId              Partner elegido
-   * @param {number} args.categoryPrice          Price de la categoría (paid_amount)
-   * @param {string} [args.paymentReference]     Referencia de pago (opcional)
-   * @param {string} [args.comment]              Comentario (opcional)
+   * @param args Ver interface CreateForPlayerArgs
    */
   const createForPlayer = async ({
     tournamentId,
@@ -70,14 +79,14 @@ export const useRegistrationStore = defineStore('registration', () => {
     categoryPrice,
     paymentReference,
     comment,
-  }) => {
+  }: CreateForPlayerArgs) => {
     // === Obtener player_id actual ===
-    // TODO (cuando este login):
+    // TODO (cuando esté login):
     // import { useAuthStore } from '@/stores/useAuthStore'
     // const auth = useAuthStore()
     // const currentPlayerId = auth.currentUser?.player?.id
     // if (!currentPlayerId) throw userFacingError('No se encontró el player logueado')
-    const currentPlayerId = 2 // <- MODO PRUEBA (por ahora)
+    const currentPlayerId: number = 2 // <- MODO PRUEBA (por ahora)
 
     // === Pre-check UX duplicado por torneo ===
     // Si el backend soporta ?player_id=&tournament_id=, esto evita doble inscripción.
@@ -90,14 +99,14 @@ export const useRegistrationStore = defineStore('registration', () => {
         tournament_id: tournamentId,
       })
 
-      const already = Array.isArray(existing) ? existing : (existing?.results ?? [])
+      const already = Array.isArray(existing) ? existing : (existing as Paginated<RegistrationApi>)?.results ?? []
       if (already.length > 0) {
         throw userFacingError('Ya estás inscripto en este torneo.')
       }
-    } catch (e) {
-      // Si el pre-check falla por falta de filtro en el backend, no bloqueamos.
-      // Pero si fue el error explícito de duplicado, re-lanzamos.
-      if (e?.__normalized && e.message?.includes('inscripto')) throw e
+    } catch (e: any) {
+      // Si el pre-check falla por falta de filtro en el backend, no se bloquea.
+      // Pero si fue el error explícito de duplicado, se re-lanza.
+      if (e?.__normalized && typeof e.message === 'string' && e.message.includes('inscripto')) throw e
     } finally {
       isLoading.value = false
     }
@@ -108,16 +117,15 @@ export const useRegistrationStore = defineStore('registration', () => {
     const canonPlayer = Math.min(a, b)
     const canonPartner = Math.max(a, b)
 
-    // NOTA: aunque en UI "el player logueado es el jugador",
-    // el backend impone la restricción canónica. Por eso ordenamos aquí.
-    // Si preferís enviar player=currentPlayerId y partner=partnerId y que el back reordene, usa a/b.
+    // Aunque en UI "el player logueado es el jugador",
+    // el backend impone la restricción canónica. Por eso se ordena aquí.
     const payload = {
       tournament_category: Number(tournamentCategoryId),
       player: canonPlayer,
       partner: canonPartner,
       paid_amount: Number(categoryPrice),
-      payment_reference: paymentReference && String(paymentReference).trim() || undefined,
-      comment: comment && String(comment).trim() || undefined,
+      payment_reference: (paymentReference && String(paymentReference).trim()) || undefined,
+      comment: (comment && String(comment).trim()) || undefined,
     }
 
     try {

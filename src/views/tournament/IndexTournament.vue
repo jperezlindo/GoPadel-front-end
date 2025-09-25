@@ -1,3 +1,4 @@
+<!-- src/views/tournament/IndexTournament.vue -->
 <template>
   <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -7,12 +8,22 @@
 
     <!-- Filtros -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-      <input v-model="searchName" type="text" placeholder="Buscar por nombre de torneo…"
-        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      <input v-model="searchFacility" type="text" placeholder="Buscar por nombre del facility…"
-        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      <select v-model="statusFilter"
-        class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <input
+        v-model="searchName"
+        type="text"
+        placeholder="Buscar por nombre de torneo…"
+        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <input
+        v-model="searchFacility"
+        type="text"
+        placeholder="Buscar por nombre del facility…"
+        class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <select
+        v-model="statusFilter"
+        class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
         <option value="all">Todos</option>
         <option value="active">Abiertos</option>
         <option value="inactive">Cerrados</option>
@@ -20,8 +31,8 @@
     </div>
 
     <div v-if="tournamentStore.loading" class="py-6 text-gray-600">Cargando torneos…</div>
-    <div v-else-if="tournamentStore.error" class="py-6 text-red-600">
-      {{ tournamentStore.error.message || 'Error al cargar torneos' }}
+    <div v-else-if="errorText" class="py-6 text-red-600">
+      {{ errorText }}
     </div>
 
     <ListTable v-else :columns="columns" :data="filteredTournaments">
@@ -45,69 +56,94 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
-import { showToast } from '@/utils/alerts.js'
+import { showToast } from '@/utils/alerts'
 import { formatDateLongEs } from '@/utils/dateUtils'
 import ListTable from '@/components/ListTable.vue'
 import ShowTournament from '@/views/tournament/ShowTournament.vue'
 import { useTournamentStore } from '@/stores/useTournamentStore'
+import type { TournamentFront, TournamentCategoryFront } from '@/services/tournamentApi'
+import type { Column } from '@/components/ListTable.vue'
 
 const router = useRouter()
 const tournamentStore = useTournamentStore()
 
-const showModal = ref(false)
-const selectedTournament = ref(null)
-const categories = ref([])
+// Modal state
+const showModal = ref<boolean>(false)
+const selectedTournament = ref<TournamentFront | null>(null)
+const categories = ref<TournamentCategoryFront[]>([])
 
-/** Controles de búsqueda y filtro */
-const searchName = ref('')
-const searchFacility = ref('')
-const statusFilter = ref('all') // all | active | inactive
+// Filtros
+const searchName = ref<string>('')
+const searchFacility = ref<string>('')
+const statusFilter = ref<'all' | 'active' | 'inactive'>('all')
 
-/** Columnas (sin estado) */
+// La fila que muestra la tabla
+type TableRow = TournamentFront & {
+  facility_name: string
+  date_start: string | null
+  date_end: string | null
+}
+
+// Columnas (tipadas)
 const columns = [
-  { label: 'Nombre', field: 'name' },
-  { label: 'Facility', field: 'facility_name' },
-  { label: 'Fecha Inicio', field: 'date_start' },
-  { label: 'Fecha Cierre', field: 'date_end' },
-]
+  { label: 'Nombre',        field: 'name' },
+  { label: 'Facility',      field: 'facility_name' },
+  { label: 'Fecha Inicio',  field: 'date_start' },
+  { label: 'Fecha Cierre',  field: 'date_end' },
+] as const satisfies ReadonlyArray<Column<TableRow>>
 
-const norm = (v) => (v ?? '').toString().toLowerCase().trim()
-const tournaments = computed(() => tournamentStore.tournaments || [])
+// Helpers
+const norm = (v: unknown) => String(v ?? '').toLowerCase().trim()
 
-const filteredTournaments = computed(() => {
+// Fuente de datos
+const tournaments = computed<TournamentFront[]>(() => tournamentStore.tournaments || [])
+
+// Error legible
+const errorText = computed<string | null>(() => {
+  const e = tournamentStore.error as any
+  if (!e) return null
+  return e.message || e.detail || 'Error al cargar torneos'
+})
+
+// Filtrado + presentación
+const filteredTournaments = computed<TableRow[]>(() => {
   const qName = norm(searchName.value)
   const qFacility = norm(searchFacility.value)
+
   const wantActive = statusFilter.value === 'active'
   const wantInactive = statusFilter.value === 'inactive'
 
   return (tournaments.value || [])
-    .filter(t => {
+    .filter((t) => {
       if (wantActive && !t.isActive) return false
       if (wantInactive && t.isActive) return false
+
       const name = norm(t.name)
-      const facilityName = norm(t.facility?.name ?? t.facility_name ?? t.facilityName ?? '')
+      const facilityName = norm((t as any).facility_name || t.facility || '')
+
       const matchesName = qName ? name.includes(qName) : true
       const matchesFacility = qFacility ? facilityName.includes(qFacility) : true
       return matchesName && matchesFacility
     })
-    .map(t => ({
+    .map((t) => ({
       ...t,
-      facility_name: t.facility?.name ?? t.facility_name ?? t.facilityName ?? '—',
+      facility_name: (t as any).facility_name || t.facility || '—',
       date_start: formatDateLongEs(t.date_start),
       date_end: formatDateLongEs(t.date_end),
     }))
 })
 
+// Navegación
 const goToCreate = () => router.push({ name: 'CreateTournament' })
-const editTournament = (id) => router.push({ name: 'EditTournament', params: { id } })
+const editTournament = (id: number) => router.push({ name: 'EditTournament', params: { id } })
 
-/** Abrir/Cerrar según estado actual (usa SIEMPRE el store) */
-const toggleTournament = async (row) => {
+// Toggle estado
+const toggleTournament = async (row: TournamentFront) => {
   const isActive = !!row.isActive
   const title = isActive ? 'Cerrar torneo' : 'Abrir torneo'
   const text = isActive
@@ -124,25 +160,22 @@ const toggleTournament = async (row) => {
   if (!result.isConfirmed) return
 
   try {
-    // Forzamos el estado deseado y delegamos en el store
     await tournamentStore.toggleActive(row.id, !isActive)
-
-    // Refrescamos SOLO ese torneo para evitar otra llamada de lista completa
     await tournamentStore.fetchTournamentById(row.id)
-
     showToast({
       message: isActive
         ? 'El torneo fue cerrado correctamente.'
         : 'El torneo fue abierto correctamente.',
       type: 'success'
     })
-  } catch (e) {
+  } catch (e: any) {
     console.error('No se pudo cambiar el estado del torneo:', e)
     showToast({ message: e?.message || 'Error al cambiar el estado del torneo', type: 'error' })
   }
 }
 
-const deleteTournament = async (id) => {
+// Delete
+const deleteTournament = async (id: number) => {
   const result = await Swal.fire({
     title: 'Finalizar torneo',
     text: '¿Estás seguro de que querés finalizar este torneo?',
@@ -158,12 +191,13 @@ const deleteTournament = async (id) => {
     showToast({ message: 'El torneo fue cerrado correctamente.', type: 'success' })
     await tournamentStore.fetchTournaments()
     router.push({ name: 'IndexTournament' })
-  } catch (e) {
+  } catch (e: any) {
     showToast({ message: e?.message || 'Error al cerrar el torneo', type: 'error' })
   }
 }
 
-const viewTournament = (tournament) => {
+// Modal handlers
+const viewTournament = (tournament: TournamentFront) => {
   selectedTournament.value = tournament
   categories.value = Array.isArray(tournament.categories) ? tournament.categories : []
   showModal.value = true
@@ -174,6 +208,7 @@ const closeModal = () => {
   selectedTournament.value = null
 }
 
+// Bootstrap
 onMounted(async () => {
   await tournamentStore.fetchTournaments()
 })

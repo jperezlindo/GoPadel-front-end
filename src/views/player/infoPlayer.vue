@@ -7,7 +7,7 @@
 <script setup>
 import { onMounted, computed, ref } from 'vue'
 
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthStore } from '@/stores/useAuthStoretjs'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 
 import ShowPlayer from '@/views/player/showPlayer.vue'

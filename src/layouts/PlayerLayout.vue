@@ -1,4 +1,5 @@
 <template>
+  <!-- PlayerLayout -->
   <div class="min-h-screen bg-gray-50">
     <!-- Navbar persistente -->
     <PlayerNavbar />
@@ -10,6 +11,6 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import PlayerNavbar from '@/components/PlayerNavbar.vue'
 </script>

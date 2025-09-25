@@ -51,34 +51,37 @@
             <div class="bg-white w-full max-w-3xl rounded-xl shadow-lg p-6 relative">
                 <button @click="closeModal"
                     class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl">×</button>
-                <ShowUser :user="selectedUser" />
+                <ShowUser v-if="selectedUser" :user="selectedUser!" />
             </div>
         </div>
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import { showToast } from '@/utils/alerts.js'
+import { showToast } from '@/utils/alerts'
 
 import ListTable from '@/components/ListTable.vue'
 import ShowUser from '@/views/user/ShowUser.vue'
-import { useUserStore } from '@/stores/useUserStore.js'
+import { useUserStore } from '@/stores/useUserStore'
+import type { UserFront } from '@/services/userApi'
 
 const router = useRouter()
 const userStore = useUserStore()
 
+const ROLE_PLAYER = 3
+
 const showModal = ref(false)
-const selectedUser = ref(null)
+const selectedUser = ref < UserFront | null > (null)
 
 // Filtros locales
-const searchTerm = ref('')
-const statusFilter = ref('all') // 'all' | 'active' | 'inactive'
+const searchTerm = ref < string > ('')
+const statusFilter = ref < 'all' | 'active' | 'inactive' > ('all')
 
-// Columnas que existen en el modelo/front actual
-const columns = [
+// Columnas del modelo/front actual
+const columns: Array<{ label: string; field: keyof UserFront | 'rol_id' }> = [
     { label: 'Nombre', field: 'name' },
     { label: 'Apellido', field: 'last_name' },
     { label: 'Email', field: 'email' },
@@ -94,27 +97,27 @@ onMounted(async () => {
     }
 })
 
-// Totales (sobre el store)
+// Totales (sobre el store) — excluye jugadores
 const totals = computed(() => {
     const list = Array.isArray(userStore.users) ? userStore.users : []
-    const active = list.filter(u => u.rol_id !== 1 && !!u.isActive).length
-    const inactive = list.filter(u => u.rol_id !== 1 && !u.isActive).length
-    return { total: active + inactive, active, inactive }
+    const base = list.filter(u => u.rol_id !== ROLE_PLAYER)
+    const active = base.filter(u => !!u.isActive).length
+    const inactive = base.filter(u => !u.isActive).length
+    return { total: base.length, active, inactive }
 })
 
-// Helper: normaliza texto para búsqueda (sin acentos, minúsculas)
-const toKey = (v) =>
+// Normaliza texto para búsqueda
+const toKey = (v: unknown): string =>
     String(v ?? '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim()
 
-// Filtro combinado por estado y búsqueda (excluye rol jugador = 1)
-const filteredUsers = computed(() => {
-    const list = Array.isArray(userStore.users) ? userStore.users : []
-
-    const base = list.filter(u => u.rol_id !== 1) // excluimos jugadores
+// Filtro combinado (excluye jugadores)
+const filteredUsers = computed < UserFront[] > (() => {
+    const list = Array.isArray(userStore.users) ? (userStore.users as UserFront[]) : []
+    const base = list.filter(u => u.rol_id !== ROLE_PLAYER)
 
     // estado
     let byStatus = base
@@ -142,11 +145,11 @@ const goToCreate = () => {
     router.push({ name: 'CreateUser' })
 }
 
-const editUser = (userId) => {
+const editUser = (userId: number) => {
     router.push({ name: 'EditUser', params: { id: userId } })
 }
 
-const showUser = (user) => {
+const showUser = (user: UserFront) => {
     selectedUser.value = user
     showModal.value = true
 }
@@ -157,7 +160,7 @@ const closeModal = () => {
 }
 
 // Activar/Desactivar con confirmación y toast
-const onToggleActive = async (row) => {
+const onToggleActive = async (row: UserFront) => {
     const nextState = !row.isActive
     const actionText = nextState ? 'activar' : 'desactivar'
 
